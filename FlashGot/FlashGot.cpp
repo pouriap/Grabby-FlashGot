@@ -878,6 +878,27 @@ public:
 };
 
 
+class DMSFreeDownloadManager5X :
+	public DMSSupportNativeHost
+{
+
+protected:
+
+	const char * getHostId(){ 
+		return "org.freedownloadmanager.fdm5.cnh"; 
+	}
+
+public:
+
+	const char * getName() { return "Free Download Manager 5X"; }
+
+	void dispatch(const DownloadInfo *downloadInfo){
+		printf("NOT IMPLEMENTED YET HEHE");
+	}
+
+};
+
+
 
 class DMSLeechGetBase :
 	public DMSupportCOM
@@ -1639,6 +1660,7 @@ void DMSFactory::registerAll()
 	add(new DMSThunderOld());
 	add(new DMSWellGet());
 	add(new DMSwxDownloadFast());
+	add(new DMSFreeDownloadManager5X());
 }
 
 

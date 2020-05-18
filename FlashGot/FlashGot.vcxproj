@@ -74,6 +74,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="ClassDiagram1.cd" />
     <None Include="IDManTypeInfo.tlb" />
     <None Include="ReadMe.txt" />
   </ItemGroup>

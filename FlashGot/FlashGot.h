@@ -444,6 +444,34 @@ public:
 };
 
 
+class DMSSupportNativeHost :
+	public DMSupport
+{
+
+protected:
+	
+	virtual const char * getHostId() = 0;
+
+	const char* getManifestPath(){
+		std::string leafPath = "";
+		leafPath += "Software\\Mozilla\\NativeMessagingHosts\\";
+		leafPath += getHostId();
+		return DMSupport::findProgram(HKEY_CURRENT_USER, (char*)leafPath.c_str());
+	}
+	
+public:
+	
+	void check() 
+	{
+		const char* path = getManifestPath();
+		std::string error = "Native client not available for: ";
+		error += getHostId();
+		if(!path) throw error.c_str();
+	}
+	
+};
+
+
 class DMSDownloadAcceleratorPlus:
 	public DMSupportCOM
 {

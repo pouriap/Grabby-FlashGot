@@ -19,6 +19,7 @@
     <None Include="IDManTypeInfo.tlb">
       <Filter>Header Files</Filter>
     </None>
+    <None Include="ClassDiagram1.cd" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
