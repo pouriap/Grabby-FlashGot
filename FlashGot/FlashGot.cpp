@@ -882,6 +882,10 @@ class DMSFreeDownloadManager5X :
 	public DMSSupportNativeHost
 {
 
+private:
+	
+	int id;
+
 protected:
 
 	const char * getHostId(){ 
@@ -890,10 +894,59 @@ protected:
 
 public:
 
+	DMSFreeDownloadManager5X(){ id = 0; }
+
 	const char * getName() { return "Free Download Manager 5X"; }
 
 	void dispatch(const DownloadInfo *downloadInfo){
-		printf("NOT IMPLEMENTED YET HEHE");
+
+		long lc = downloadInfo->linksCount;
+		if(lc<1) return;
+
+		wchar_t *referer = downloadInfo->referer;
+
+		JSONObject msg;
+		std::wstring id_s = std::to_wstring((long long)id++);
+		msg[L"id"] = new JSONValue(id_s.c_str());
+		msg[L"type"] = new JSONValue(L"create_downloads");
+		JSONObject create_downloads;
+		JSONArray downloads;
+		for(int i=0; i<lc; i++){
+			//todo: add post data
+			//todo: add user agent
+			//todo: what are we gonna do with non-ascii chars in everywhere?
+			wchar_t *cookie = downloadInfo->links[i].cookie;
+			wchar_t *url = downloadInfo->links[i].url;
+			JSONObject dl;
+			dl[L"url"] = new JSONValue(url);
+			dl[L"originalUrl"] = new JSONValue(url);
+			dl[L"httpReferer"] = new JSONValue(referer);
+			dl[L"userAgent"] = new JSONValue(L"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0");
+			dl[L"httpCookies"] = new JSONValue(cookie);
+			//todo: what's this?
+			dl[L"youtubeChannelVideosDownload"] = new JSONValue(0);
+			downloads.push_back(new JSONValue(dl));
+		}
+		create_downloads[L"downloads"] = new JSONValue(downloads);
+		msg[L"create_downloads"] = new JSONValue(create_downloads);
+		JSONValue *value = new JSONValue(msg);
+		std::wstring fff = value->Stringify();
+
+		//todo: get a better json library 
+		#include <comdef.h>  // you will need this
+		_bstr_t b(fff.c_str());
+		char* c = b;
+
+		char manifestPath[BUF1K];
+		getManifestPath(manifestPath, BUF1K);
+		NativeHostConnect* con = new NativeHostConnect(manifestPath, "fdm_ffext2@freedownloadmanager.org");
+
+		//char* s1 = "{\"create_downloads\":{\"downloads\":[{\"httpCookies\":\"\",\"httpReferer\":\"https:\/\/drive.google.com\/\",\"originalUrl\":\"https:\/\/doc-0k-0s-docs.googleusercontent.com\/docs\/securesc\/n9uc5vpq4ofirop0djlohr3pvgom8c21\/ijs6abnjg6nkfokusu3c0qmoip1mnk78\/1589563800000\/17062244966882741997\/14128672135349851838Z\/1_zeJqQP8umrTk-evSAt3wCLxAkTKo0lC?e=download&nonce=0juhc98t2nnvk&user=14128672135349851838Z&hash=51l69vpfvbp9v1vd6vosm1oumsu4ahtb\",\"url\":\"https:\/\/doc-0k-0s-docs.googleusercontent.com\/docs\/securesc\/n9uc5vpq4ofirop0djlohr3pvgom8c21\/ijs6abnjg6nkfokusu3c0qmoip1mnk78\/1589563800000\/17062244966882741997\/14128672135349851838Z\/1_zeJqQP8umrTk-evSAt3wCLxAkTKo0lC?e=download&nonce=0juhc98t2nnvk&user=14128672135349851838Z&hash=51l69vpfvbp9v1vd6vosm1oumsu4ahtb\",\"userAgent\":\"Mozilla\/5.0 (Windows NT 6.1; rv:56.0) Gecko\/20100101 Firefox\/56.0\",\"youtubeChannelVideosDownload\":0}]},\"id\":\"0\",\"type\":\"create_downloads\"}";
+		//char* s2 = "{\"id\":\"4\",\"type\":\"create_downloads\",\"create_downloads\":{\"downloads\":[{\"url\":\"https://puria.bad.mn/dl/2m.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/2m.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0}]}}";
+
+		con->sendMessage(c);
+
+		delete value;
 	}
 
 };
@@ -1845,11 +1898,11 @@ int performDownload(char *fname)
 
 int main(int argc, char* argv[])
 {
+
     if(argc < 2 || strcmp(argv[1], "-o") == 0)
 	{
 		return performTest(argc > 2 ? argv[2] : NULL);
 	}
-
 	
 	if (argc >= 2 && strcmp(argv[1], "-s") == 0)
 	{
