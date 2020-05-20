@@ -55,6 +55,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Command>copy C:\Users\virtual\Desktop\a.txt "C:\Users\virtual\Documents\Visual Studio 2010\Projects\FlashGot\Debug\a.txt"</Command>
+      <Outputs>asdfasdfa sdf asdfas dfasd </Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

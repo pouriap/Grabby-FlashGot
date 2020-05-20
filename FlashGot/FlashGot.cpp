@@ -894,7 +894,7 @@ protected:
 
 public:
 
-	DMSFreeDownloadManager5X(){ id = 0; }
+	DMSFreeDownloadManager5X(){ id = 2; }
 
 	const char * getName() { return "Free Download Manager 5X"; }
 
@@ -941,10 +941,21 @@ public:
 		getManifestPath(manifestPath, BUF1K);
 		NativeHostConnect* con = new NativeHostConnect(manifestPath, "fdm_ffext2@freedownloadmanager.org");
 
-		//char* s1 = "{\"create_downloads\":{\"downloads\":[{\"httpCookies\":\"\",\"httpReferer\":\"https:\/\/drive.google.com\/\",\"originalUrl\":\"https:\/\/doc-0k-0s-docs.googleusercontent.com\/docs\/securesc\/n9uc5vpq4ofirop0djlohr3pvgom8c21\/ijs6abnjg6nkfokusu3c0qmoip1mnk78\/1589563800000\/17062244966882741997\/14128672135349851838Z\/1_zeJqQP8umrTk-evSAt3wCLxAkTKo0lC?e=download&nonce=0juhc98t2nnvk&user=14128672135349851838Z&hash=51l69vpfvbp9v1vd6vosm1oumsu4ahtb\",\"url\":\"https:\/\/doc-0k-0s-docs.googleusercontent.com\/docs\/securesc\/n9uc5vpq4ofirop0djlohr3pvgom8c21\/ijs6abnjg6nkfokusu3c0qmoip1mnk78\/1589563800000\/17062244966882741997\/14128672135349851838Z\/1_zeJqQP8umrTk-evSAt3wCLxAkTKo0lC?e=download&nonce=0juhc98t2nnvk&user=14128672135349851838Z&hash=51l69vpfvbp9v1vd6vosm1oumsu4ahtb\",\"userAgent\":\"Mozilla\/5.0 (Windows NT 6.1; rv:56.0) Gecko\/20100101 Firefox\/56.0\",\"youtubeChannelVideosDownload\":0}]},\"id\":\"0\",\"type\":\"create_downloads\"}";
-		//char* s2 = "{\"id\":\"4\",\"type\":\"create_downloads\",\"create_downloads\":{\"downloads\":[{\"url\":\"https://puria.bad.mn/dl/2m.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/2m.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0}]}}";
+		char* s2 = "{\"id\":\"4\",\"type\":\"create_downloads\",\"create_downloads\":{\"downloads\":[{\"url\":\"https://puria.bad.mn/dl/2m.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/2m.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0}]}}";
+		char* hs = "{\"id\":\"1\",\"type\":\"handshake\",\"handshake\":{\"api_version\":\"1\",\"browser\":\"Firefox\"}}";
+		char* tp = "\"task posted\"";
 
-		con->sendMessage(c);
+		//if(!con->sendMessage(hs)){
+		//	printf("ERROR  11");
+		//}
+
+		if(!con->sendMessage(c)){
+			printf("ERROR: %d", GetLastError());
+		}
+
+		//if(!con->sendMessage(tp)){
+		//	printf("ERROR 33");
+		//}
 
 		delete value;
 	}

@@ -595,6 +595,7 @@ public:
 	}
 };
 
+#define SL 0
 
 //todo: add to own header file
 //todo: if FDM is not running sending download message only runs it
@@ -632,17 +633,21 @@ private:
 		BOOL bSuccess = FALSE; 
 
 		// Set up members of the PROCESS_INFORMATION structure. 
-		ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
+//Sleep(SL);		
+ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
 
 		// Set up members of the STARTUPINFO structure. 
 		// This structure specifies the STDIN and STDOUT handles for redirection.
-		ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
-		siStartInfo.cb = sizeof(STARTUPINFO); 
+	//Sleep(SL);	
+	ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
+	//????
+	//Sleep(SL);			
+	siStartInfo.cb = sizeof(STARTUPINFO); 
 		siStartInfo.hStdError = g_hChildStd_OUT_Wr;
 		siStartInfo.hStdOutput = g_hChildStd_OUT_Wr;
 		siStartInfo.hStdInput = g_hChildStd_IN_Rd;
 		siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
-
+	//Sleep(SL);
 		// Create the child process. 
 		bSuccess = CreateProcess(NULL, 
 			commandLine,     // command line 
@@ -654,6 +659,7 @@ private:
 			NULL,          // use parent's current directory 
 			&siStartInfo,  // STARTUPINFO pointer 
 			&piProcInfo);  // receives PROCESS_INFORMATION 
+	//Sleep(SL);
 
 		// If an error occurs, exit the application. 
 		if ( ! bSuccess ){
@@ -662,10 +668,14 @@ private:
 		else 
 		{
 			bool success = true;
-			success &= CloseHandle(piProcInfo.hProcess) != 0;
-			success &= CloseHandle(piProcInfo.hThread) != 0;
-			success &= CloseHandle(g_hChildStd_OUT_Wr) != 0;
-			success &= CloseHandle(g_hChildStd_IN_Rd) != 0;
+		//Sleep(SL);	
+		success &= CloseHandle(piProcInfo.hProcess) != 0;
+		//Sleep(SL);	
+		success &= CloseHandle(piProcInfo.hThread) != 0;
+		//Sleep(SL);	
+		success &= CloseHandle(g_hChildStd_OUT_Wr) != 0;
+		//Sleep(SL);	
+		success &= CloseHandle(g_hChildStd_IN_Rd) != 0;
 
 			return success;
 		}
@@ -680,7 +690,7 @@ private:
 		BOOL bSuccess = FALSE;
 
 		int jsonLen = strlen(json);
-		int dataLen = jsonLen+4;
+		int dataLen = jsonLen + 4 + 1;
 		char* data = new char[dataLen];
 		// Native messaging protocol requires message length as a 4-byte integer prepended to the JSON string
 		data[0] = char(((jsonLen>>0) & 0xFF));
@@ -688,15 +698,22 @@ private:
 		data[2] = char(((jsonLen>>16) & 0xFF));
 		data[3] = char(((jsonLen>>24) & 0xFF));
 		// Add the JSON after the length
-		for(int i=0; i<jsonLen; i++){
+		int i;
+		for(i=0; i<jsonLen; i++){
 			data[i+4] = json[i];
 		}
+		// Add the terminating null character
+		data[i+4] = '\0';
 
+		Sleep(SL);
+	
 		bSuccess = WriteFile(g_hChildStd_IN_Wr, data, dataLen, &dwWritten, NULL);
 		if(!bSuccess){
 			return false;
 		}
-		delete data;
+		delete [] data;
+
+		Sleep(SL);
 
 		// Close the pipe handle so the child process stops reading. 
 		return CloseHandle(g_hChildStd_IN_Wr) != 0;
@@ -710,7 +727,7 @@ private:
 		bool doReadPipe = false;
 		CHAR chBuf[BUFSIZE]; 
 		BOOL bSuccess = FALSE;
-		//HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+		HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
 		// wait 100ms for the client app to output something
 		// because if we call ReadFile and the read succeeds and the client app doesn't output anything then 
@@ -735,8 +752,8 @@ private:
 		{ 
 			bSuccess = ReadFile( g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
 			if( ! bSuccess || dwRead == 0 ) break; 
-			//bSuccess = WriteFile(hParentStdOut, chBuf, dwRead, &dwWritten, NULL);
-			//if (! bSuccess ) break; 
+			bSuccess = WriteFile(hParentStdOut, chBuf, dwRead, &dwWritten, NULL);
+			if (! bSuccess ) break; 
 		} 
 
 		// Close the pipe handle 
@@ -837,7 +854,7 @@ public:
 		if(!CreateChildProcess(exePath, extensionId)){
 			return false;
 		}
-
+		
 		// Write to the pipe that is the standard input for a child process. 
 		// Data is written to the pipe's buffers, so it is not necessary to wait
 		// until the child process is running before writing data.
