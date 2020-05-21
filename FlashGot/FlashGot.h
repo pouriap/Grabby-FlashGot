@@ -604,16 +604,19 @@ class NativeHostConnect
 
 private:
 
+
+	PROCESS_INFORMATION piProcInfo; 
+
 	//change all BUFSIZE references to BUF1K, BUF2K, BUF4K
 	static const int BUFSIZE = 4096;
 
 	std::string manifestPath;
 	std::string hostPath;
 	std::string extensionId;
-	HANDLE g_hChildStd_IN_Rd;
-	HANDLE g_hChildStd_IN_Wr;
-	HANDLE g_hChildStd_OUT_Rd;
-	HANDLE g_hChildStd_OUT_Wr;
+	HANDLE hChildStdIN_THEIRS;
+	HANDLE hChildStdIN_OURS;
+	HANDLE hChildStdOUT_OURS;
+	HANDLE hChildStdOUT_THEIRS;
 
 	// Create a child process that uses the previously created pipes for STDIN and STDOUT.
 	bool CreateChildProcess(const char* exeName, std::string extensionId)
@@ -628,7 +631,7 @@ private:
 		strcpy_s(buf, BUFSIZE, cmd.c_str());
 		LPSTR commandLine = buf;
 
-		PROCESS_INFORMATION piProcInfo; 
+		
 		STARTUPINFO siStartInfo;
 		BOOL bSuccess = FALSE; 
 
@@ -643,9 +646,9 @@ ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
 	//????
 	//Sleep(SL);			
 	siStartInfo.cb = sizeof(STARTUPINFO); 
-		siStartInfo.hStdError = g_hChildStd_OUT_Wr;
-		siStartInfo.hStdOutput = g_hChildStd_OUT_Wr;
-		siStartInfo.hStdInput = g_hChildStd_IN_Rd;
+		siStartInfo.hStdError = hChildStdOUT_THEIRS;
+		siStartInfo.hStdOutput = hChildStdOUT_THEIRS;
+		siStartInfo.hStdInput = hChildStdIN_THEIRS;
 		siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 	//Sleep(SL);
 		// Create the child process. 
@@ -654,7 +657,7 @@ ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
 			NULL,          // process security attributes 
 			NULL,          // primary thread security attributes 
 			TRUE,          // handles are inherited 
-			0,             // creation flags 
+			CREATE_NO_WINDOW | CREATE_SUSPENDED ,             // creation flags 
 			NULL,          // use parent's environment 
 			NULL,          // use parent's current directory 
 			&siStartInfo,  // STARTUPINFO pointer 
@@ -667,15 +670,33 @@ ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
 		}
 		else 
 		{
+
+			HANDLE jobHandle = CreateJobObject(NULL, "MY JOB");
+			JOBOBJECT_EXTENDED_LIMIT_INFORMATION info;
+			info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_BREAKAWAY_OK;
+			bSuccess = SetInformationJobObject(jobHandle, JobObjectExtendedLimitInformation, &info, sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
+			if(!bSuccess){
+				return false;
+			}
+			bSuccess = AssignProcessToJobObject(jobHandle, piProcInfo.hProcess);
+			if(!bSuccess){
+				return false;
+			}
+
+			
+
 			bool success = true;
 		//Sleep(SL);	
-		success &= CloseHandle(piProcInfo.hProcess) != 0;
+		//success &= CloseHandle(piProcInfo.hProcess) != 0;
 		//Sleep(SL);	
-		success &= CloseHandle(piProcInfo.hThread) != 0;
+		//success &= CloseHandle(piProcInfo.hThread) != 0;
 		//Sleep(SL);	
-		success &= CloseHandle(g_hChildStd_OUT_Wr) != 0;
+		//success &= CloseHandle(hChildStdOUT_THEIRS) != 0;
 		//Sleep(SL);	
-		success &= CloseHandle(g_hChildStd_IN_Rd) != 0;
+		//success &= CloseHandle(hChildStdIN_THEIRS) != 0;
+
+
+		
 
 			return success;
 		}
@@ -685,6 +706,18 @@ ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
 	// Read from a file and write its contents to the pipe for the child's STDIN.
 	// Stop when there is no more data. 
 	bool WriteToPipe(char* json) { 
+
+
+
+		HANDLE event = CreateEvent(NULL, false, false, NULL);
+
+		OVERLAPPED overlapped;
+		overlapped.hEvent = event;
+
+
+
+
+
 
 		DWORD dwWritten; 
 		BOOL bSuccess = FALSE;
@@ -706,17 +739,42 @@ ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
 		data[i+4] = '\0';
 
 		Sleep(SL);
+		ResumeThread(piProcInfo.hThread);
+
 	
-		bSuccess = WriteFile(g_hChildStd_IN_Wr, data, dataLen, &dwWritten, NULL);
+		bSuccess = WriteFile(hChildStdIN_OURS, data, dataLen, &dwWritten, NULL);
+
 		if(!bSuccess){
 			return false;
 		}
 		delete [] data;
 
+
+		//char chBuf[BUFSIZE];
+		//bSuccess = ReadFile( hChildStdIN_THEIRS, chBuf, BUFSIZE, NULL, &overlapped);
+
+		//WaitForSingleObject(event, INFINITE);
+
+		
+
+	/*	bSuccess = GetOverlappedResult(
+			hChildStdIN_THEIRS,
+			&overlapped,
+			&dwWritten,
+			false
+			);
+		if (!bSuccess || dwWritten != dataLen) {
+			printf("FUCKED UP ERROR");
+			return false;
+		} else if (dwWritten > 0) {
+			printf("THIS ACTUALLY WORKS?");
+		}*/
+		
+
 		Sleep(SL);
 
 		// Close the pipe handle so the child process stops reading. 
-		return CloseHandle(g_hChildStd_IN_Wr) != 0;
+		return CloseHandle(hChildStdIN_OURS) != 0;
 
 	} 
 
@@ -734,7 +792,7 @@ ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
 		// we will get stuck forever because read will wait until something is output
 		// because of that we use Peek instead of Read
 		for(int i=0; i<10; i++){
-			bSuccess = PeekNamedPipe(g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, &dwAvail, NULL);
+			bSuccess = PeekNamedPipe(hChildStdOUT_OURS, chBuf, BUFSIZE, &dwRead, &dwAvail, NULL);
 			// If read is successful but no data is available then wait
 			if(bSuccess && dwAvail==0){
 				Sleep(10);
@@ -750,14 +808,14 @@ ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
 		
 		while (doReadPipe) 
 		{ 
-			bSuccess = ReadFile( g_hChildStd_OUT_Rd, chBuf, BUFSIZE, &dwRead, NULL);
+			bSuccess = ReadFile( hChildStdOUT_OURS, chBuf, BUFSIZE, &dwRead, NULL);
 			if( ! bSuccess || dwRead == 0 ) break; 
 			bSuccess = WriteFile(hParentStdOut, chBuf, dwRead, &dwWritten, NULL);
 			if (! bSuccess ) break; 
 		} 
 
 		// Close the pipe handle 
-		return CloseHandle(g_hChildStd_OUT_Rd) != 0;
+		return CloseHandle(hChildStdOUT_OURS) != 0;
 
 	} 
 
@@ -809,10 +867,10 @@ ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
 public:
 
 	NativeHostConnect(char* manifPath, char* extId){
-		g_hChildStd_IN_Rd = NULL;
-		g_hChildStd_IN_Wr = NULL;
-		g_hChildStd_OUT_Rd = NULL;
-		g_hChildStd_OUT_Wr = NULL;
+		hChildStdIN_THEIRS = NULL;
+		hChildStdIN_OURS = NULL;
+		hChildStdOUT_OURS = NULL;
+		hChildStdOUT_THEIRS = NULL;
 		manifestPath = manifPath;
 		hostPath = "";
 		extensionId = extId;
@@ -828,23 +886,77 @@ public:
 		saAttr.bInheritHandle = TRUE; 
 		saAttr.lpSecurityDescriptor = NULL; 
 
+
+		LPTSTR lpszPipename = TEXT("\\\\.\\pipe\\PoStdOUT"); 
+		hChildStdOUT_OURS = CreateNamedPipe(
+			lpszPipename,
+			FILE_FLAG_OVERLAPPED | PIPE_ACCESS_INBOUND,
+			PIPE_TYPE_BYTE | PIPE_WAIT,
+			1 /* number of connections */,
+			4096 /* output buffer size */,
+			4096 /* input buffer size */,
+			0 /* timeout */,
+			&saAttr
+		);
+
+		hChildStdOUT_THEIRS = CreateFile(
+			lpszPipename,
+			GENERIC_WRITE,
+			0,
+			&saAttr,
+			OPEN_EXISTING,
+			FILE_ATTRIBUTE_NORMAL,
+			NULL
+		);
+
 		// Create a pipe for the child process's STDOUT. 
-		if ( ! CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &saAttr, 0) ){
-			return false;
-		}
+		//if ( ! CreatePipe(&hChildStdOUT_OURS, &hChildStdOUT_THEIRS, &saAttr, 0) ){
+		//	return false;
+		//}
 
 		// Ensure the read handle to the pipe for STDOUT is not inherited.
-		if ( ! SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0) ){
+		if ( ! SetHandleInformation(hChildStdOUT_OURS, HANDLE_FLAG_INHERIT, 0) ){
 			return false;
 		}
+
+
+
+		SECURITY_ATTRIBUTES saAttr2; 
+
+		// Set the bInheritHandle flag so pipe handles are inherited. 
+		saAttr2.nLength = sizeof(SECURITY_ATTRIBUTES); 
+		saAttr2.bInheritHandle = TRUE; 
+		saAttr2.lpSecurityDescriptor = NULL;  
+
+		LPTSTR lpszPipename2 = TEXT("\\\\.\\pipe\\PoStdIN"); 
+		hChildStdIN_THEIRS = CreateNamedPipe(
+			lpszPipename2,
+			FILE_FLAG_OVERLAPPED | PIPE_ACCESS_INBOUND,
+			PIPE_TYPE_BYTE | PIPE_WAIT,
+			1 /* number of connections */,
+			4096 /* output buffer size */,
+			4096 /* input buffer size */,
+			0 /* timeout */,
+			&saAttr2
+			);
+
+		hChildStdIN_OURS = CreateFile(
+			lpszPipename2,
+			GENERIC_WRITE,
+			0,
+			&saAttr2,
+			OPEN_EXISTING,
+			FILE_ATTRIBUTE_NORMAL,
+			NULL
+			);
 
 		// Create a pipe for the child process's STDIN. 
-		if (! CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &saAttr, 0) ){
-			return false;
-		}
+		//if (! CreatePipe(&hChildStdIN_THEIRS, &hChildStdIN_OURS, &saAttr, 0) ){
+		//	return false;
+		//}
 
 		// Ensure the write handle to the pipe for STDIN is not inherited. 
-		if ( ! SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0) ){
+		if ( ! SetHandleInformation(hChildStdIN_OURS, HANDLE_FLAG_INHERIT, 0) ){
 			return false;
 		}
 
