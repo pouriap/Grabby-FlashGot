@@ -878,7 +878,7 @@ public:
 };
 
 
-class DMSFreeDownloadManager5X :
+class DMSFreeDownloadManager5plus :
 	public DMSSupportNativeHost
 {
 
@@ -894,9 +894,9 @@ protected:
 
 public:
 
-	DMSFreeDownloadManager5X(){ id = 2; }
+	DMSFreeDownloadManager5plus(){ id = 1; }
 
-	const char * getName() { return "Free Download Manager 5X"; }
+	const char * getName() { return "Free Download Manager 5+"; }
 
 	void dispatch(const DownloadInfo *downloadInfo){
 
@@ -939,7 +939,9 @@ public:
 
 		char manifestPath[BUF1K];
 		getManifestPath(manifestPath, BUF1K);
-		NativeHostConnect* con = new NativeHostConnect(manifestPath, "fdm_ffext2@freedownloadmanager.org");
+		NativeHost con(manifestPath, "fdm_ffext2@freedownloadmanager.org");
+		con.init();
+		Sleep(1000);
 
 		char* s2 = "{\"id\":\"4\",\"type\":\"create_downloads\",\"create_downloads\":{\"downloads\":[{\"url\":\"https://puria.bad.mn/dl/2m.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/2m.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0}]}}";
 		char* hs = "{\"id\":\"1\",\"type\":\"handshake\",\"handshake\":{\"api_version\":\"1\",\"browser\":\"Firefox\"}}";
@@ -949,7 +951,7 @@ public:
 		//	printf("ERROR  11");
 		//}
 
-		if(!con->sendMessage(c)){
+		if(!con.sendMessage(c)){
 			printf("ERROR: %d", GetLastError());
 		}
 
@@ -1724,7 +1726,7 @@ void DMSFactory::registerAll()
 	add(new DMSThunderOld());
 	add(new DMSWellGet());
 	add(new DMSwxDownloadFast());
-	add(new DMSFreeDownloadManager5X());
+	add(new DMSFreeDownloadManager5plus());
 }
 
 
