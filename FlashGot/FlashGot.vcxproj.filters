@@ -37,19 +37,13 @@
     <ClInclude Include="IDManTypeInfo_i.c">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="jute.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="JSON.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="JSONValue.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="NativeHost.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="utf8.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="jsonla.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -63,19 +57,13 @@
     <ClCompile Include="DAP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="jute.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="JSON.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="JSONValue.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="NativeHost.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="utf8.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="jsonla.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

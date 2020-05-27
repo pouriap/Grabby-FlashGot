@@ -877,14 +877,11 @@ public:
 	}
 };
 
+using namespace ggicci;
 
 class DMSFreeDownloadManager5plus :
 	public DMSSupportNativeHost
 {
-
-private:
-	
-	int id;
 
 protected:
 
@@ -894,72 +891,66 @@ protected:
 
 public:
 
-	DMSFreeDownloadManager5plus(){ id = 1; }
-
-	const char * getName() { return "Free Download Manager 5+"; }
+	const char * getName() { 
+		return "Free Download Manager 5+"; 
+	}
 
 	void dispatch(const DownloadInfo *downloadInfo){
 
 		long lc = downloadInfo->linksCount;
 		if(lc<1) return;
 
-		wchar_t *referer = downloadInfo->referer;
+		std::string referer = downloadInfo->referer;
 
-		JSONObject msg;
-		std::wstring id_s = std::to_wstring((long long)id++);
-		msg[L"id"] = new JSONValue(id_s.c_str());
-		msg[L"type"] = new JSONValue(L"create_downloads");
-		JSONObject create_downloads;
-		JSONArray downloads;
+		Json msg = Json::Parse("{}");
+		msg.AddProperty("id", Json("4"));
+		msg.AddProperty("type", Json("create_downloads"));
+		Json create_downloads = Json::Parse("{}");
+		Json downloads = Json::Parse("[]");
 		for(int i=0; i<lc; i++){
 			//todo: add post data
 			//todo: add user agent
 			//todo: what are we gonna do with non-ascii chars in everywhere?
-			wchar_t *cookie = downloadInfo->links[i].cookie;
-			wchar_t *url = downloadInfo->links[i].url;
-			JSONObject dl;
-			dl[L"url"] = new JSONValue(url);
-			dl[L"originalUrl"] = new JSONValue(url);
-			dl[L"httpReferer"] = new JSONValue(referer);
-			dl[L"userAgent"] = new JSONValue(L"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0");
-			dl[L"httpCookies"] = new JSONValue(cookie);
+			std::string cookie = downloadInfo->links[i].cookie;
+			std::string url = downloadInfo->links[i].url;
+			Json dl = Json::Parse("{}");
+			dl.AddProperty("url", Json(url));
+			dl.AddProperty("originalUrl", Json(url));
+			dl.AddProperty("httpReferer", Json(referer));
+			dl.AddProperty("userAgent", Json("Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0"));
+			dl.AddProperty("httpCookies", Json(cookie));
 			//todo: what's this?
-			dl[L"youtubeChannelVideosDownload"] = new JSONValue(0);
-			downloads.push_back(new JSONValue(dl));
+			dl.AddProperty("youtubeChannelVideosDownload", Json(0));
+			downloads.Push(dl);
 		}
-		create_downloads[L"downloads"] = new JSONValue(downloads);
-		msg[L"create_downloads"] = new JSONValue(create_downloads);
-		JSONValue *value = new JSONValue(msg);
-		std::wstring fff = value->Stringify();
+		create_downloads.AddProperty("downloads", downloads);
+		msg.AddProperty("create_downloads", create_downloads);
+		
 
-		//todo: get a better json library 
-		#include <comdef.h>  // you will need this
-		_bstr_t b(fff.c_str());
-		char* c = b;
+		std::string jsonStr = msg.ToString();
 
 		char manifestPath[BUF1K];
 		getManifestPath(manifestPath, BUF1K);
-		NativeHost con(manifestPath, "fdm_ffext2@freedownloadmanager.org");
-		con.init();
-		Sleep(1000);
 
-		char* s2 = "{\"id\":\"4\",\"type\":\"create_downloads\",\"create_downloads\":{\"downloads\":[{\"url\":\"https://puria.bad.mn/dl/2m.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/2m.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0}]}}";
-		char* hs = "{\"id\":\"1\",\"type\":\"handshake\",\"handshake\":{\"api_version\":\"1\",\"browser\":\"Firefox\"}}";
-		char* tp = "\"task posted\"";
 
-		//if(!con->sendMessage(hs)){
-		//	printf("ERROR  11");
-		//}
+		const char* hs = "{\"id\":\"1\",\"type\":\"handshake\",\"handshake\":{\"api_version\":\"1\",\"browser\":\"Firefox\"}}";
+		const char* ui = "{\"id\":\"2\",\"type\":\"ui_strings\"}";
+		const char* set = "{\"id\":\"3\",\"type\":\"query_settings\"}";
+		const char* dl = "{\"id\":\"4\",\"type\":\"create_downloads\",\"create_downloads\":{\"downloads\":[{\"url\":\"https://puria.bad.mn/dl/????.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/????.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0}]}}";
+		const char* c = jsonStr.c_str();
 
-		if(!con.sendMessage(c)){
-			printf("ERROR: %d", GetLastError());
+		NativeHost host = NativeHost(manifestPath, "fdm_ffext2@freedownloadmanager.org");
+		if(host.init()){
+			//sending the init messages appears to have solved the crash issues but just for safety
+			//let's add a 200ms wait
+			Sleep(200);
+			host.sendMessage(hs);
+			host.sendMessage(ui);
+			host.sendMessage(set);
+			host.sendMessage(dl);
 		}
+		host.close();
 
-		//if(!con->sendMessage(tp)){
-		//	printf("ERROR 33");
-		//}
-
-		delete value;
 	}
 
 };

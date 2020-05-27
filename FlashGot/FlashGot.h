@@ -15,8 +15,7 @@ extern CComModule _Module;
 //for dlgrab
 #include <fstream>
 #include <stdlib.h>
-#include "jute.h"
-#include "JSON.h"
+#include "jsonla.h"
 #include "NativeHost.h"
 #define BUF1K 1024
 #define BUF2K 2048

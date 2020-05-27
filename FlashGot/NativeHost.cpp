@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include <stdio.h>
 #include "NativeHost.h"
-#include "jute.h"
+#include "jsonla.h"
 #include "utf8.h"
 
 using namespace std;
@@ -192,6 +192,7 @@ bool NativeHost::init()
     return success;
 
 }
+using namespace ggicci;
 void NativeHost::initHostPath()
 {
     hostPath = "";
@@ -204,25 +205,21 @@ void NativeHost::initHostPath()
     if(fileStr.length() == 0){
             return;
     }
-    //todo: bad json file causes segmentation fault, change json library
-    jute::jValue jVal = jute::parser::parse(fileStr);
 
-    // if path is not available in json
-    if(jVal["path"].get_type() != jute::JSTRING){
-        return;
-    }
+	std::string path;
 
-    std::string path = jVal["path"].as_string();
+	try{
+		Json manifJson = Json::Parse(fileStr.c_str());
+		path = manifJson["path"].AsString();
+	}catch(...){
+		return;
+	}
 
     char mDrive[_MAX_DRIVE], mDir[_MAX_DIR], mFilename[_MAX_FNAME], mExt[_MAX_EXT];
-    //todo: move back to _s version
-    //_splitpath_s(manifPath.c_str(), mDrive, _MAX_DRIVE, mDir, _MAX_DIR, mFilename, _MAX_FNAME, mExt, _MAX_EXT);
-    _splitpath(manifPath.c_str(), mDrive, mDir, mFilename, mExt);
+    _splitpath_s(manifPath.c_str(), mDrive, _MAX_DRIVE, mDir, _MAX_DIR, mFilename, _MAX_FNAME, mExt, _MAX_EXT);
 
     char pDrive[_MAX_DRIVE], pDir[_MAX_DIR], pFilename[_MAX_FNAME], pExt[_MAX_EXT];
-    //todo: move back to _s version
-    //_splitpath_s(path.c_str(), pDrive, _MAX_DRIVE, pDir, _MAX_DIR, pFilename, _MAX_FNAME, pExt, _MAX_EXT);
-    _splitpath(path.c_str(), pDrive, pDir, pFilename, pExt);
+    _splitpath_s(path.c_str(), pDrive, _MAX_DRIVE, pDir, _MAX_DIR, pFilename, _MAX_FNAME, pExt, _MAX_EXT);
 
     // if host path is relative
     if(strcmp(pDrive, "") == 0){
