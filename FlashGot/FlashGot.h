@@ -23,7 +23,7 @@ extern CComModule _Module;
 #define BUF4K 4096
 
 
-#define VERSION "1.4.1.2"
+#define VERSION "0.1.0b"
 
 #define DMS_POLL_DELAY 100
 #define DMS_POLL_TIMEOUT 60000
@@ -563,7 +563,7 @@ public:
 	
 	unsigned int checkAll() {
 		unsigned int retVal=0;
-		fprintf(stdout,"FlashGot Win Bridge %s\r\n",VERSION);
+		fprintf(stdout,"FlashGot for Download Grab v%s\r\n",VERSION);
 		FGCOMGuard::addClient();
 		for(DMSNode *cursor=last; cursor; cursor=cursor->prev) {
 			try {

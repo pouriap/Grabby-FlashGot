@@ -902,9 +902,9 @@ public:
 
 		std::string referer = utf8::narrow(downloadInfo->referer);
 
-		Json msg = Json::Parse("{}");
-		msg.AddProperty("id", Json("4"));
-		msg.AddProperty("type", Json("create_downloads"));
+		Json jsonMsg = Json::Parse("{}");
+		jsonMsg.AddProperty("id", Json("4"));
+		jsonMsg.AddProperty("type", Json("create_downloads"));
 		Json create_downloads = Json::Parse("{}");
 		Json downloads = Json::Parse("[]");
 		for(int i=0; i<lc; i++){
@@ -923,27 +923,26 @@ public:
 			downloads.Push(dl);
 		}
 		create_downloads.AddProperty("downloads", downloads);
-		msg.AddProperty("create_downloads", create_downloads);
+		jsonMsg.AddProperty("create_downloads", create_downloads);
 		
-		std::string jsonStr = msg.ToString();
-
-		const char* hs = "{\"id\":\"1\",\"type\":\"handshake\",\"handshake\":{\"api_version\":\"1\",\"browser\":\"Firefox\"}}";
-		const char* ui = "{\"id\":\"2\",\"type\":\"ui_strings\"}";
-		const char* set = "{\"id\":\"3\",\"type\":\"query_settings\"}";
-		const char* dl = "{\"id\":\"4\",\"type\":\"create_downloads\",\"create_downloads\":{\"downloads\":[{\"url\":\"https://puria.bad.mn/dl/سلام.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/سلام.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0}]}}";
-		const char* dlm = "{\"id\":\"4\",\"type\":\"create_downloads\",\"create_downloads\":{\"downloads\":[{\"url\":\"https://puria.bad.mn/dl/سلام.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/سلام.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0},{\"url\":\"https://puria.bad.mn/dl/3M.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/3M.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0},{\"url\":\"https://puria.bad.mn/dl/4M.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/4M.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0}]}}";
-		const char* c = jsonStr.c_str();
-
 		NativeHost host(getManifestPath(), "fdm_ffext2@freedownloadmanager.org");
-		if(host.init()){
-			//sending the init messages appears to have solved the crash issues but just for safety
-			//let's add a 200ms wait
+
+		if(host.init())
+		{
+			const char* init1 = "{\"id\":\"1\",\"type\":\"handshake\",\"handshake\":{\"api_version\":\"1\",\"browser\":\"Firefox\"}}";
+			const char* init2 = "{\"id\":\"2\",\"type\":\"ui_strings\"}";
+			const char* init3 = "{\"id\":\"3\",\"type\":\"query_settings\"}";
+
+			//sending the init messages appears to have solved the crash issues 
+			//but just for safety...
 			Sleep(200);
-			host.sendMessage(hs);
-			host.sendMessage(ui);
-			host.sendMessage(set);
-			host.sendMessage(c);
+
+			host.sendMessage(init1);
+			host.sendMessage(init2);
+			host.sendMessage(init3);
+			host.sendMessage(jsonMsg.ToString().c_str());
 		}
+
 		host.close();
 
 	}

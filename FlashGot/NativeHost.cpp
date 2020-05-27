@@ -259,7 +259,7 @@ bool NativeHost::sendMessage(const char* json)
         return false;
     }
 
-    DWORD dwRead;
+    DWORD dwRead, dwWritten;
     CHAR chBuf[BUF2K]; 
     success = hostStdOUT.read(chBuf, BUF2K, dwRead);
     if(!success){
@@ -273,7 +273,7 @@ bool NativeHost::sendMessage(const char* json)
     }
     chBuf[i] = '\n';
     HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    success = WriteFile(hParentStdOut, chBuf, dwRead-4+1, NULL, NULL);
+    success = WriteFile(hParentStdOut, chBuf, dwRead-4+1, &dwWritten, NULL);
     if(!success){
         printf("redirecting failed: %d\n", GetLastError());
         return false;
