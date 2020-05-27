@@ -2,18 +2,21 @@
 #include <stdio.h>
 #include "NativeHost.h"
 #include "jute.h"
+#include "utf8.h"
+
+using namespace std;
 
 Pipe::Pipe(char* nm)
 {
-    name = TEXT(nm);
+    name = nm;
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
     saAttr.bInheritHandle = TRUE;
     saAttr.lpSecurityDescriptor = NULL;
 }
 bool Pipe::init()
 {
-    readHandle = CreateNamedPipe(
-        name,
+    readHandle = CreateNamedPipeW(
+        utf8::widen(name).c_str(),
         readFlags,
         PIPE_TYPE_BYTE | PIPE_WAIT,
         1 /* number of connections */,
@@ -27,8 +30,8 @@ bool Pipe::init()
         return false;
     }
 
-    writeHandle = CreateFile(
-        name,
+    writeHandle = CreateFileW(
+        utf8::widen(name).c_str(),
         GENERIC_WRITE,
         0,
         &saAttr,
@@ -81,11 +84,12 @@ InputPipe::InputPipe(char* nm) : Pipe(nm)
 }
 bool InputPipe::dataAvailable(){
     DWORD dwAvail;
-    for(int i=0; i<10; i++){
+	const int intrvl = 200;
+    for(int totalSleep=0; totalSleep < MSG_RESPONSE_TIMEOUT; totalSleep+=intrvl){
         BOOL success = PeekNamedPipe(readHandle, NULL, NULL, NULL, &dwAvail, NULL);
         if( success && dwAvail > 0 ){ return true; }
         //if we didn't get anything then wait
-        Sleep(10);
+        Sleep(intrvl);
     }
     return false;
 }
@@ -106,18 +110,18 @@ bool InputPipe::read(CHAR* readBuf, int bufLen, DWORD& dwRead)
 }
 
 
-bool Process::create(HANDLE hStdIN, HANDLE hStdOUT, LPSTR cmd, LPSTR args, LPSTR workDir)
+bool Process::create(HANDLE hStdIN, HANDLE hStdOUT, string cmd, string args, string workDir)
 {
     //DWORD processFlags = CREATE_NO_WINDOW | CREATE_SUSPENDED;
     DWORD processFlags = CREATE_NO_WINDOW;
     //STARTUPINFOEX startupInfoEx;
     //STARTUPINFO startupInfo = startupInfoEx.StartupInfo;
-    STARTUPINFO startupInfo;
+    STARTUPINFOW startupInfo;
 
-    ZeroMemory( &startupInfo, sizeof(STARTUPINFO) );
+    ZeroMemory( &startupInfo, sizeof(STARTUPINFOW) );
     ZeroMemory( &procInfo, sizeof(PROCESS_INFORMATION) );
 
-    startupInfo.cb = sizeof(STARTUPINFO);
+    startupInfo.cb = sizeof(STARTUPINFOW);
     startupInfo.dwFlags = STARTF_USESTDHANDLES;
 
     startupInfo.hStdInput = hStdIN;
@@ -126,15 +130,15 @@ bool Process::create(HANDLE hStdIN, HANDLE hStdOUT, LPSTR cmd, LPSTR args, LPSTR
 
     //todo: thread attributes needs vc++
     //todo: support hosts that are scripts like .bat
-    BOOL bSuccess = CreateProcess(
-        cmd,
-        args,            // command line
+    BOOL bSuccess = CreateProcessW(
+        utf8::widen(cmd).c_str(),
+        const_cast<wchar_t *>(utf8::widen(args).c_str()),            // command line
         NULL,            // process security attributes
         NULL,            // primary thread security attributes
         TRUE,            // handles are inherited
         processFlags,    // creation flags
         NULL,            // use parent's environment
-        workDir,         // use parent's current directory
+        utf8::widen(workDir).c_str(),         // use parent's current directory
         &startupInfo,   // STARTUPINFO pointer
         &procInfo       // receives PROCESS_INFORMATIN
     );
@@ -260,7 +264,7 @@ bool NativeHost::sendMessage(const char* json)
     }
 
     DWORD dwRead;
-    CHAR chBuf[BUF2K];
+    CHAR chBuf[BUF2K]; 
     success = hostStdOUT.read(chBuf, BUF2K, dwRead);
     if(!success){
         return false;

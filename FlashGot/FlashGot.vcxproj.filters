@@ -49,6 +49,9 @@
     <ClInclude Include="NativeHost.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="utf8.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -70,6 +73,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="NativeHost.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="utf8.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
