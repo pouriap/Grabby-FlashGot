@@ -900,7 +900,7 @@ public:
 		long lc = downloadInfo->linksCount;
 		if(lc<1) return;
 
-		std::string referer = downloadInfo->referer;
+		std::string referer = utf8::narrow(downloadInfo->referer);
 
 		Json msg = Json::Parse("{}");
 		msg.AddProperty("id", Json("4"));
@@ -910,9 +910,8 @@ public:
 		for(int i=0; i<lc; i++){
 			//todo: add post data
 			//todo: add user agent
-			//todo: what are we gonna do with non-ascii chars in everywhere?
-			std::string cookie = downloadInfo->links[i].cookie;
-			std::string url = downloadInfo->links[i].url;
+			std::string cookie = utf8::narrow(downloadInfo->links[i].cookie);
+			std::string url = utf8::narrow(downloadInfo->links[i].url);
 			Json dl = Json::Parse("{}");
 			dl.AddProperty("url", Json(url));
 			dl.AddProperty("originalUrl", Json(url));
@@ -926,20 +925,16 @@ public:
 		create_downloads.AddProperty("downloads", downloads);
 		msg.AddProperty("create_downloads", create_downloads);
 		
-
 		std::string jsonStr = msg.ToString();
-
-		char manifestPath[BUF1K];
-		getManifestPath(manifestPath, BUF1K);
-
 
 		const char* hs = "{\"id\":\"1\",\"type\":\"handshake\",\"handshake\":{\"api_version\":\"1\",\"browser\":\"Firefox\"}}";
 		const char* ui = "{\"id\":\"2\",\"type\":\"ui_strings\"}";
 		const char* set = "{\"id\":\"3\",\"type\":\"query_settings\"}";
-		const char* dl = "{\"id\":\"4\",\"type\":\"create_downloads\",\"create_downloads\":{\"downloads\":[{\"url\":\"https://puria.bad.mn/dl/????.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/????.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0}]}}";
+		const char* dl = "{\"id\":\"4\",\"type\":\"create_downloads\",\"create_downloads\":{\"downloads\":[{\"url\":\"https://puria.bad.mn/dl/سلام.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/سلام.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0}]}}";
+		const char* dlm = "{\"id\":\"4\",\"type\":\"create_downloads\",\"create_downloads\":{\"downloads\":[{\"url\":\"https://puria.bad.mn/dl/سلام.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/سلام.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0},{\"url\":\"https://puria.bad.mn/dl/3M.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/3M.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0},{\"url\":\"https://puria.bad.mn/dl/4M.bin\",\"originalUrl\":\"https://puria.bad.mn/dl/4M.bin\",\"httpReferer\":\"https://puria.bad.mn/dl/\",\"userAgent\":\"Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0\",\"httpCookies\":\"\",\"youtubeChannelVideosDownload\":0}]}}";
 		const char* c = jsonStr.c_str();
 
-		NativeHost host = NativeHost(manifestPath, "fdm_ffext2@freedownloadmanager.org");
+		NativeHost host(getManifestPath(), "fdm_ffext2@freedownloadmanager.org");
 		if(host.init()){
 			//sending the init messages appears to have solved the crash issues but just for safety
 			//let's add a 200ms wait
@@ -947,7 +942,7 @@ public:
 			host.sendMessage(hs);
 			host.sendMessage(ui);
 			host.sendMessage(set);
-			host.sendMessage(dl);
+			host.sendMessage(c);
 		}
 		host.close();
 

@@ -4,8 +4,6 @@
 #include "jsonla.h"
 #include "utf8.h"
 
-using namespace std;
-
 Pipe::Pipe(char* nm)
 {
     name = nm;
@@ -110,7 +108,7 @@ bool InputPipe::read(CHAR* readBuf, int bufLen, DWORD& dwRead)
 }
 
 
-bool Process::create(HANDLE hStdIN, HANDLE hStdOUT, string cmd, string args, string workDir)
+bool Process::create(HANDLE hStdIN, HANDLE hStdOUT, std::string cmd, std::string args, std::string workDir)
 {
     //DWORD processFlags = CREATE_NO_WINDOW | CREATE_SUSPENDED;
     DWORD processFlags = CREATE_NO_WINDOW;
@@ -197,13 +195,13 @@ void NativeHost::initHostPath()
 {
     hostPath = "";
     hostDir = "";
-    std::ifstream file(manifPath.c_str());
+    std::ifstream file(utf8::widen(manifPath.c_str()));
     std::string fileStr = "";
     std::string tmp;
 
     while (std::getline(file, tmp)){ fileStr += tmp; }
     if(fileStr.length() == 0){
-            return;
+		return;
     }
 
 	std::string path;

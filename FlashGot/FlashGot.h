@@ -17,6 +17,7 @@ extern CComModule _Module;
 #include <stdlib.h>
 #include "jsonla.h"
 #include "NativeHost.h"
+#include "utf8.h"
 #define BUF1K 1024
 #define BUF2K 2048
 #define BUF4K 4096
@@ -462,27 +463,26 @@ protected:
 	
 	virtual const char * getHostId() = 0;
 
-	void getManifestPath(char* manifestPath, int len){
-		std::string leafPath = "";
-		leafPath += "Software\\Mozilla\\NativeMessagingHosts\\";
+	std::string getManifestPath()
+	{
+		std::string manifestPath = "";
+		std::string leafPath = "Software\\Mozilla\\NativeMessagingHosts\\";
 		leafPath += getHostId();
 		char* path = DMSupport::findProgram(HKEY_CURRENT_USER, (char*)leafPath.c_str());
 		if(path){
-			strcpy_s(manifestPath, len, path);
-		}
-		else{
-			strcpy_s(manifestPath, len, "");
+			manifestPath = path;
 		}
 		delete [] path;
+
+		return manifestPath;
 	}
 	
 public:
 	
 	void check() 
 	{
-		char path[BUF1K];
-		getManifestPath(path, BUF1K);
-		if(!strlen(path)){
+		std::string path = getManifestPath();
+		if(path.length() == 0){
 			std::string error = "Native client not available for: ";
 			error += getHostId();
 			throw error.c_str();

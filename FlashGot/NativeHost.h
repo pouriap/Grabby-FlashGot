@@ -11,13 +11,11 @@
 
 #define MSG_RESPONSE_TIMEOUT 10000
 
-using namespace std;
-
 class Pipe{
 protected:
     SECURITY_ATTRIBUTES saAttr;
     DWORD readFlags, writeFlags;
-    string name;
+    std::string name;
     //protected constructor because we don't want Pipe to be directrly instantiated
     Pipe(char* nm);
 public:
@@ -45,19 +43,19 @@ private:
     PROCESS_INFORMATION procInfo;
 public:
     virtual ~Process(){close();}
-    bool create(HANDLE hStdIN, HANDLE hStdOUT, string cmd, string args, string workDir);
+    bool create(HANDLE hStdIN, HANDLE hStdOUT, std::string cmd, std::string args, std::string workDir);
     void close();
 };
 
 class NativeHost{
 private:
-    string manifPath, hostPath, hostDir, extId;
+    std::string manifPath, hostPath, hostDir, extId;
     Process process;
     OutputPipe hostStdIN;
     InputPipe hostStdOUT;
     void initHostPath();
 public:
-    NativeHost(string manifestPath, string extensionId);
+    NativeHost(std::string manifestPath, std::string extensionId);
     virtual ~NativeHost(){close();}
     bool init();
     bool sendMessage(const char* json);
