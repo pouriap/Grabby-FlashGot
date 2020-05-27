@@ -877,8 +877,6 @@ public:
 	}
 };
 
-using namespace ggicci;
-
 class DMSFreeDownloadManager5plus :
 	public DMSSupportNativeHost
 {
@@ -896,6 +894,8 @@ public:
 	}
 
 	void dispatch(const DownloadInfo *downloadInfo){
+
+		using namespace ggicci;
 
 		long lc = downloadInfo->linksCount;
 		if(lc<1) return;

@@ -110,10 +110,6 @@ bool InputPipe::read(CHAR* readBuf, int bufLen, DWORD& dwRead)
 
 bool Process::create(HANDLE hStdIN, HANDLE hStdOUT, std::string cmd, std::string args, std::string workDir)
 {
-    //DWORD processFlags = CREATE_NO_WINDOW | CREATE_SUSPENDED;
-    DWORD processFlags = CREATE_NO_WINDOW;
-    //STARTUPINFOEX startupInfoEx;
-    //STARTUPINFO startupInfo = startupInfoEx.StartupInfo;
     STARTUPINFOW startupInfo;
 
     ZeroMemory( &startupInfo, sizeof(STARTUPINFOW) );
@@ -126,21 +122,23 @@ bool Process::create(HANDLE hStdIN, HANDLE hStdOUT, std::string cmd, std::string
     startupInfo.hStdOutput = hStdOUT;
     startupInfo.hStdError = hStdOUT;
 
-    //todo: thread attributes needs vc++
+	DWORD processFlags = CREATE_NO_WINDOW;
+
     //todo: support hosts that are scripts like .bat
     BOOL bSuccess = CreateProcessW(
         utf8::widen(cmd).c_str(),
         const_cast<wchar_t *>(utf8::widen(args).c_str()),            // command line
-        NULL,            // process security attributes
-        NULL,            // primary thread security attributes
-        TRUE,            // handles are inherited
-        processFlags,    // creation flags
-        NULL,            // use parent's environment
-        utf8::widen(workDir).c_str(),         // use parent's current directory
-        &startupInfo,   // STARTUPINFO pointer
-        &procInfo       // receives PROCESS_INFORMATIN
+        NULL,								// process security attributes
+        NULL,								// primary thread security attributes
+        TRUE,								// handles are inherited
+        processFlags,						// creation flags
+        NULL,								// use parent's environment
+        utf8::widen(workDir).c_str(),		// use parent's current directory
+        &startupInfo,						// STARTUPINFO pointer
+        &procInfo							// receives PROCESS_INFORMATIN
     );
-
+	
+	//we don't need these
     CloseHandle(hStdIN);
     CloseHandle(hStdOUT);
     CloseHandle(procInfo.hThread);
@@ -181,18 +179,20 @@ bool NativeHost::init()
     }
 
     std::string args = manifPath + " " + extId;
-    LPSTR exe = const_cast<char *>(hostPath.c_str());
-    LPSTR exeArgs = const_cast<char *>(args.c_str());
-    LPSTR workDir = const_cast<char *>(hostDir.c_str());
+    std::string exe = const_cast<char *>(hostPath.c_str());
+    std::string exeArgs = const_cast<char *>(args.c_str());
+    std::string workDir = const_cast<char *>(hostDir.c_str());
 
     success = process.create(hostStdIN.readHandle, hostStdOUT.writeHandle, exe, exeArgs, workDir);
 
     return success;
 
 }
-using namespace ggicci;
+
 void NativeHost::initHostPath()
 {
+	using namespace ggicci;
+
     hostPath = "";
     hostDir = "";
     std::ifstream file(utf8::widen(manifPath.c_str()));
@@ -236,6 +236,7 @@ bool NativeHost::sendMessage(const char* json)
     int jsonLen = strlen(json);
     int dataLen = jsonLen + 4;
     char* data = new char[dataLen];
+
     // Native messaging protocol requires message length as a 4-byte integer prepended to the JSON string
     data[0] = char(((jsonLen>>0) & 0xFF));
     data[1] = char(((jsonLen>>8) & 0xFF));

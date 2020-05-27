@@ -1,9 +1,9 @@
+#ifndef NATIVEHOST_H_INCLUDED
+#define NATIVEHOST_H_INCLUDED
+
 #include <windows.h>
 #include <string>
 #include <fstream>
-
-#ifndef NATIVEHOST_H_INCLUDED
-#define NATIVEHOST_H_INCLUDED
 
 #define BUF1K 1024
 #define BUF2K 2048
@@ -16,7 +16,7 @@ protected:
     SECURITY_ATTRIBUTES saAttr;
     DWORD readFlags, writeFlags;
     std::string name;
-    //protected constructor because we don't want Pipe to be directrly instantiated
+    //protected constructor because we don't want Pipe to be directly instantiated
     Pipe(char* nm);
 public:
     HANDLE readHandle, writeHandle;
