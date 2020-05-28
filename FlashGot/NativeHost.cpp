@@ -142,6 +142,7 @@ bool Process::create(HANDLE hStdIN, HANDLE hStdOUT, std::string cmd, std::string
     CloseHandle(hStdIN);
     CloseHandle(hStdOUT);
     CloseHandle(procInfo.hThread);
+	CloseHandle(procInfo.hProcess);
 
     if(!bSuccess){
         printf("process creation failed: %d\n", GetLastError());

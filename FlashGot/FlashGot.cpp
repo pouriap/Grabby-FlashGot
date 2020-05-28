@@ -383,7 +383,7 @@ protected:
 
 public:
 	
-	const char * getName() { return "Free Download Manager"; }
+	const char * getName() { return "Free Download Manager 3"; }
 
 	void dispatch(const DownloadInfo *downloadInfo )
 	{
@@ -418,6 +418,83 @@ public:
 		}
 	}
 	
+};
+
+class DMSFreeDownloadManager5plus :
+	public DMSSupportNativeHost
+{
+
+protected:
+
+	const char * getHostId(){ 
+		return "org.freedownloadmanager.fdm5.cnh"; 
+	}
+
+public:
+
+	const char * getName() { 
+		return "Free Download Manager 5+"; 
+	}
+
+	void dispatch(const DownloadInfo *downloadInfo){
+
+		using namespace ggicci;
+
+		long lc = downloadInfo->linksCount;
+		if(lc<1) return;
+
+		std::string referer = utf8::narrow(downloadInfo->referer);
+
+		Json jsonMsg = Json::Parse("{}");
+		jsonMsg.AddProperty("id", Json("4"));
+		jsonMsg.AddProperty("type", Json("create_downloads"));
+		Json create_downloads = Json::Parse("{}");
+		Json downloads = Json::Parse("[]");
+		for(int i=0; i<lc; i++){
+			//todo: add post data
+			//todo: add user agent
+			std::string cookie = utf8::narrow(downloadInfo->links[i].cookie);
+			std::string url = utf8::narrow(downloadInfo->links[i].url);
+			Json dl = Json::Parse("{}");
+			dl.AddProperty("url", Json(url));
+			dl.AddProperty("originalUrl", Json(url));
+			dl.AddProperty("httpReferer", Json(referer));
+			dl.AddProperty("userAgent", Json("Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0"));
+			dl.AddProperty("httpCookies", Json(cookie));
+			//todo: what's this?
+			dl.AddProperty("youtubeChannelVideosDownload", Json(0));
+			downloads.Push(dl);
+		}
+		create_downloads.AddProperty("downloads", downloads);
+		jsonMsg.AddProperty("create_downloads", create_downloads);
+
+		NativeHost host(getManifestPath(), "fdm_ffext2@freedownloadmanager.org");
+
+		if(host.init())
+		{
+			const char* init1 = "{\"id\":\"1\",\"type\":\"handshake\",\"handshake\":{\"api_version\":\"1\",\"browser\":\"Firefox\"}}";
+			const char* init2 = "{\"id\":\"2\",\"type\":\"ui_strings\"}";
+			const char* init3 = "{\"id\":\"3\",\"type\":\"query_settings\"}";
+
+			//sending the init messages appears to have solved the crash issues 
+			//but just for safety...
+			Sleep(200);
+
+			//don't attempt to send the message if any of the inits failed
+			if(
+				host.sendMessage(init1) &&
+				host.sendMessage(init2) &&
+				host.sendMessage(init3)
+			){
+				host.sendMessage(jsonMsg.ToString().c_str());
+			}
+
+		}
+
+		host.close();
+
+	}
+
 };
 
 class DMSBitComet :
@@ -876,79 +953,6 @@ public:
 		pIDM->Release();
 	}
 };
-
-class DMSFreeDownloadManager5plus :
-	public DMSSupportNativeHost
-{
-
-protected:
-
-	const char * getHostId(){ 
-		return "org.freedownloadmanager.fdm5.cnh"; 
-	}
-
-public:
-
-	const char * getName() { 
-		return "Free Download Manager 5+"; 
-	}
-
-	void dispatch(const DownloadInfo *downloadInfo){
-
-		using namespace ggicci;
-
-		long lc = downloadInfo->linksCount;
-		if(lc<1) return;
-
-		std::string referer = utf8::narrow(downloadInfo->referer);
-
-		Json jsonMsg = Json::Parse("{}");
-		jsonMsg.AddProperty("id", Json("4"));
-		jsonMsg.AddProperty("type", Json("create_downloads"));
-		Json create_downloads = Json::Parse("{}");
-		Json downloads = Json::Parse("[]");
-		for(int i=0; i<lc; i++){
-			//todo: add post data
-			//todo: add user agent
-			std::string cookie = utf8::narrow(downloadInfo->links[i].cookie);
-			std::string url = utf8::narrow(downloadInfo->links[i].url);
-			Json dl = Json::Parse("{}");
-			dl.AddProperty("url", Json(url));
-			dl.AddProperty("originalUrl", Json(url));
-			dl.AddProperty("httpReferer", Json(referer));
-			dl.AddProperty("userAgent", Json("Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0"));
-			dl.AddProperty("httpCookies", Json(cookie));
-			//todo: what's this?
-			dl.AddProperty("youtubeChannelVideosDownload", Json(0));
-			downloads.Push(dl);
-		}
-		create_downloads.AddProperty("downloads", downloads);
-		jsonMsg.AddProperty("create_downloads", create_downloads);
-		
-		NativeHost host(getManifestPath(), "fdm_ffext2@freedownloadmanager.org");
-
-		if(host.init())
-		{
-			const char* init1 = "{\"id\":\"1\",\"type\":\"handshake\",\"handshake\":{\"api_version\":\"1\",\"browser\":\"Firefox\"}}";
-			const char* init2 = "{\"id\":\"2\",\"type\":\"ui_strings\"}";
-			const char* init3 = "{\"id\":\"3\",\"type\":\"query_settings\"}";
-
-			//sending the init messages appears to have solved the crash issues 
-			//but just for safety...
-			Sleep(200);
-
-			host.sendMessage(init1);
-			host.sendMessage(init2);
-			host.sendMessage(init3);
-			host.sendMessage(jsonMsg.ToString().c_str());
-		}
-
-		host.close();
-
-	}
-
-};
-
 
 
 class DMSLeechGetBase :
