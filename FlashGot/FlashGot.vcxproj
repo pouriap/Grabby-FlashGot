@@ -57,8 +57,12 @@
     </Link>
     <CustomBuildStep>
       <Command>copy C:\Users\virtual\Desktop\a.txt "C:\Users\virtual\Documents\Visual Studio 2010\Projects\FlashGot\Debug\a.txt"</Command>
-      <Outputs>asdfasdfa sdf asdfas dfasd </Outputs>
+      <Outputs>
+      </Outputs>
     </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>copy "$(TargetPath)" "\\192.168.1.20\shared\$(TargetName).exe"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -77,6 +81,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>Wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy "$(TargetPath)" "\\192.168.1.20\shared\$(TargetName).exe"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="ClassDiagram1.cd" />

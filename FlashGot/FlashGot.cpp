@@ -1694,6 +1694,7 @@ void DMSFactory::registerAll()
 	add(new DMSFlashGet2());
 	add(new DMSFlashGet2X());
 	add(new DMSFreeDownloadManager());
+	add(new DMSFreeDownloadManager5plus());
 	add(new DMSFreshDownload());
 	add(new DMSGetRight());
 	add(new DMSGigaGet());
@@ -1715,7 +1716,6 @@ void DMSFactory::registerAll()
 	add(new DMSThunderOld());
 	add(new DMSWellGet());
 	add(new DMSwxDownloadFast());
-	add(new DMSFreeDownloadManager5plus());
 }
 
 
@@ -1858,7 +1858,8 @@ int performDownload(char *fname)
 	char *done = new char[doneLen];
 	
 	sprintf_s(done, doneLen, "%s.done", fname);	
-	if(fopen_s(&f, fname, "rb") != 0)  
+	//add 'N' mode so the file handle will not be inherited by those nasty DMs that will be run from this process
+	if(fopen_s(&f, fname, "rbN") != 0)  
 	{
 		struct stat statbuf;
 		if(stat(done, &statbuf)) // done file doesn't exist  

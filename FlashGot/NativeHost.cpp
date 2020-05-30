@@ -13,30 +13,14 @@ Pipe::Pipe(char* nm)
 }
 bool Pipe::init()
 {
-    readHandle = CreateNamedPipeW(
-        utf8::widen(name).c_str(),
-        readFlags,
-        PIPE_TYPE_BYTE | PIPE_WAIT,
-        1 /* number of connections */,
-        BUF4K /* output buffer size */,
-        BUF4K /* input buffer size */,
-        0 /* timeout */,
-        &saAttr
-    );
+	//we use anonymous pipes because the child process inherits this and keeps them open until it exits
+	//if the DM is starting from scratch then these handles will keep open until the DM exists
+	CreatePipe(&readHandle, &writeHandle, &saAttr, 0);
+
     if(readHandle == INVALID_HANDLE_VALUE){
         printf("error creating read handle: %d\n", GetLastError());
         return false;
     }
-
-    writeHandle = CreateFileW(
-        utf8::widen(name).c_str(),
-        GENERIC_WRITE,
-        0,
-        &saAttr,
-        OPEN_EXISTING,
-        writeFlags,
-        NULL
-    );
     if(writeHandle == INVALID_HANDLE_VALUE){
         printf("error creating write handle: %d\n", GetLastError());
         return false;
@@ -91,7 +75,7 @@ bool InputPipe::dataAvailable(){
     }
     return false;
 }
-bool InputPipe::read(CHAR* readBuf, int bufLen, DWORD& dwRead)
+bool InputPipe::read(char* readBuf, int bufLen, DWORD& dwRead)
 {
     if(readHandle == INVALID_HANDLE_VALUE){
         printf("cannot read from invalid handle: %d\n", GetLastError());
@@ -108,7 +92,7 @@ bool InputPipe::read(CHAR* readBuf, int bufLen, DWORD& dwRead)
 }
 
 
-bool Process::create(HANDLE hStdIN, HANDLE hStdOUT, std::string cmd, std::string args, std::string workDir)
+bool Process::create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string cmd, std::string args, std::string workDir)
 {
     STARTUPINFOW startupInfo;
 
@@ -133,7 +117,7 @@ bool Process::create(HANDLE hStdIN, HANDLE hStdOUT, std::string cmd, std::string
         TRUE,								// handles are inherited
         processFlags,						// creation flags
         NULL,								// use parent's environment
-        utf8::widen(workDir).c_str(),		// use parent's current directory
+        utf8::widen(workDir).c_str(),		// current directory
         &startupInfo,						// STARTUPINFO pointer
         &procInfo							// receives PROCESS_INFORMATIN
     );
@@ -142,7 +126,6 @@ bool Process::create(HANDLE hStdIN, HANDLE hStdOUT, std::string cmd, std::string
     CloseHandle(hStdIN);
     CloseHandle(hStdOUT);
     CloseHandle(procInfo.hThread);
-	CloseHandle(procInfo.hProcess);
 
     if(!bSuccess){
         printf("process creation failed: %d\n", GetLastError());

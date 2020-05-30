@@ -35,7 +35,7 @@ class InputPipe: public Pipe{
 public:
     InputPipe(char* nm);
     bool dataAvailable();
-    bool read(CHAR* readBuf, int bufLen, DWORD& dwRead);
+    bool read(char* readBuf, int bufLen, DWORD& dwRead);
 };
 
 class Process{
@@ -43,7 +43,7 @@ private:
     PROCESS_INFORMATION procInfo;
 public:
     virtual ~Process(){close();}
-    bool create(HANDLE hStdIN, HANDLE hStdOUT, std::string cmd, std::string args, std::string workDir);
+    bool create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string cmd, std::string args, std::string workDir);
     void close();
 };
 
