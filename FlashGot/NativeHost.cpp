@@ -256,6 +256,12 @@ bool NativeHost::sendMessage(const char* json, int timeout)
         chBuf[i] = chBuf[i+4];
     }
     chBuf[i] = '\n';
+
+	//return if we are in a console-less app
+	if(!GetConsoleWindow()){
+		return true;
+	}
+
     HANDLE hParentStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
     success = WriteFile(hParentStdOut, chBuf, dwRead-4+1, &dwWritten, NULL);
     if(!success){
