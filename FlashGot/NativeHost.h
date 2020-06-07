@@ -9,7 +9,7 @@
 #define BUF2K 2048
 #define BUF4K 4096
 
-#define MSG_RESPONSE_TIMEOUT 10000
+#define MSG_RESPONSE_TIMEOUT 5000
 
 class Pipe{
 protected:
@@ -34,7 +34,7 @@ public:
 class InputPipe: public Pipe{
 public:
     InputPipe(char* nm);
-    bool dataAvailable();
+    bool dataAvailable(int timeout);
     bool read(char* readBuf, int bufLen, DWORD& dwRead);
 };
 
@@ -58,7 +58,7 @@ public:
     NativeHost(std::string manifestPath, std::string extensionId);
     virtual ~NativeHost(){close();}
     bool init();
-    bool sendMessage(const char* json);
+	bool sendMessage(const char* json, int timeout=MSG_RESPONSE_TIMEOUT);
     void close();
 };
 

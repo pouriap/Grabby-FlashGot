@@ -23,7 +23,7 @@ extern CComModule _Module;
 #define BUF4K 4096
 
 
-#define VERSION "0.1.1b"
+#define VERSION "0.7.0b"
 
 #define DMS_POLL_DELAY 100
 #define DMS_POLL_TIMEOUT 60000

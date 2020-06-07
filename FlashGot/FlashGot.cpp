@@ -374,53 +374,6 @@ public:
 
 
 class DMSFreeDownloadManager :
-	public DMSupportCOM
-{
-
-protected:
-
-	const char * getProgId() { return "WG.WGUrlListReceiver"; }
-
-public:
-	
-	const char * getName() { return "Free Download Manager 3"; }
-
-	void dispatch(const DownloadInfo *downloadInfo )
-	{
-		
-		int linksCount=downloadInfo->linksCount;
-		if(linksCount>0)
-		{
-			CookieManager cm(downloadInfo);
-			const char *progId;
-			char *methodName;
-
-			if(linksCount<2)
-			{
-				progId="WG.WGUrlReceiver";
-				methodName="AddDownload";
-			} else {
-				progId=getProgId();
-				methodName="AddURLToList";
-			}
-
-			FGCOMHelper fdm(progId);
-			fdm.set("Referer",downloadInfo->referer);
-			LinkInfo *links=downloadInfo->links;
-			for(int j=0; j< linksCount; j++) {
-				LinkInfo l=links[j];
-				fdm.set("Url",l.url);
-				fdm.set("Comment",l.comment);
-				fdm.invoke(methodName);
-			}
-			if(linksCount>1) fdm.invoke("ShowAddUrlListDialog");
-			
-		}
-	}
-	
-};
-
-class DMSFreeDownloadManager5plus :
 	public DMSSupportNativeHost
 {
 
@@ -433,7 +386,7 @@ protected:
 public:
 
 	const char * getName() { 
-		return "Free Download Manager 5+"; 
+		return "Free Download Manager"; 
 	}
 
 	void dispatch(const DownloadInfo *downloadInfo){
@@ -486,7 +439,7 @@ public:
 				host.sendMessage(init2) &&
 				host.sendMessage(init3)
 			){
-				host.sendMessage(jsonMsg.ToString().c_str());
+				host.sendMessage(jsonMsg.ToString().c_str(), 20000);
 			}
 
 		}
@@ -496,6 +449,55 @@ public:
 	}
 
 };
+
+
+class DMSFreeDownloadManager3 :
+	public DMSupportCOM
+{
+
+protected:
+
+	const char * getProgId() { return "WG.WGUrlListReceiver"; }
+
+public:
+	
+	const char * getName() { return "Free Download Manager 3"; }
+
+	void dispatch(const DownloadInfo *downloadInfo )
+	{
+		
+		int linksCount=downloadInfo->linksCount;
+		if(linksCount>0)
+		{
+			CookieManager cm(downloadInfo);
+			const char *progId;
+			char *methodName;
+
+			if(linksCount<2)
+			{
+				progId="WG.WGUrlReceiver";
+				methodName="AddDownload";
+			} else {
+				progId=getProgId();
+				methodName="AddURLToList";
+			}
+
+			FGCOMHelper fdm(progId);
+			fdm.set("Referer",downloadInfo->referer);
+			LinkInfo *links=downloadInfo->links;
+			for(int j=0; j< linksCount; j++) {
+				LinkInfo l=links[j];
+				fdm.set("Url",l.url);
+				fdm.set("Comment",l.comment);
+				fdm.invoke(methodName);
+			}
+			if(linksCount>1) fdm.invoke("ShowAddUrlListDialog");
+			
+		}
+	}
+	
+};
+
 
 class DMSBitComet :
 	public DMSupportCOM
@@ -1350,14 +1352,67 @@ public:
 class DMSReGet :
 	public DMSupportCOM
 {
+
+
+protected:
+
+	const char * getProgId() { return "ReGetDx.ReGetDownloadApi.1"; }
 	
-	protected:
+public:
+	
+	const char * getName() { return "ReGet"; }
+
+	void dispatch(const DownloadInfo *downloadInfo)
+	{
+		CookieManager cm(downloadInfo);
+		HELPER(h);
+
+		LinkInfo *links=downloadInfo->links;
+		int linksCount = downloadInfo->linksCount;
+		if(linksCount == 1){
+			LinkInfo l = links[0];
+			VARIANT conf;
+			conf.vt = VT_BOOL;
+			conf.boolVal = VARIANT_TRUE;
+			h.set("Url", l.url);
+			h.set("Referer", downloadInfo->referer);
+			h.set("Cookie", l.cookie);
+			h.set("Info", l.comment);
+			h.set("PostData", l.postdata);
+			h.set("Confirmation", &conf);
+			h.invoke("AddDownload");
+		}
+		else
+		{
+			VARIANT v[5];
+			v[4].vt = v[3].vt = v[2].vt = v[1].vt = v[0].vt = VT_BSTR;
+			for (long j=0, len=downloadInfo->linksCount; j<len ; j++) 
+			{ 
+				v[4].bstrVal=links[j].url;
+				v[3].bstrVal=downloadInfo->referer;
+				v[2].bstrVal=links[j].cookie;
+				v[1].bstrVal=links[j].comment;
+				v[0].bstrVal=links[j].postdata;
+				h.invoke("AddDownloadToList",v,5);
+			}
+
+			h.invoke("FlushDownloadList");
+		}
+	}
+};
+
+
+class DMSReGet_Legacy :
+	public DMSupportCOM
+{
+	
+protected:
 	const char * getProgId() 
 	{
 		return "ClickCatcher.DownloadAllFromContextMenu";
 	}
 public:
-	const char * getName() { return "ReGet"; }
+	const char * getName() { return "ReGet(Legacy)"; }
 	
 	void dispatch(const DownloadInfo *downloadInfo) 
 	{	
@@ -1694,7 +1749,7 @@ void DMSFactory::registerAll()
 	add(new DMSFlashGet2());
 	add(new DMSFlashGet2X());
 	add(new DMSFreeDownloadManager());
-	add(new DMSFreeDownloadManager5plus());
+	add(new DMSFreeDownloadManager3());
 	add(new DMSFreshDownload());
 	add(new DMSGetRight());
 	add(new DMSGigaGet());
@@ -1710,6 +1765,7 @@ void DMSFactory::registerAll()
 	add(new DMSNet_Transport2());
 	add(new DMSOrbit());
 	add(new DMSReGet());
+	add(new DMSReGet_Legacy());
 	add(new DMSStarDownloader());
 	add(new DMSTrueDownloader());
 	add(new DMSThunder());

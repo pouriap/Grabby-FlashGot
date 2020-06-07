@@ -64,10 +64,10 @@ InputPipe::InputPipe(char* nm) : Pipe(nm)
     readFlags = FILE_FLAG_OVERLAPPED | PIPE_ACCESS_INBOUND;
     writeFlags = 0 | FILE_ATTRIBUTE_NORMAL;
 }
-bool InputPipe::dataAvailable(){
+bool InputPipe::dataAvailable(int timeout){
     DWORD dwAvail;
 	const int intrvl = 200;
-    for(int totalSleep=0; totalSleep < MSG_RESPONSE_TIMEOUT; totalSleep+=intrvl){
+    for(int totalSleep=0; totalSleep < timeout; totalSleep+=intrvl){
         BOOL success = PeekNamedPipe(readHandle, NULL, NULL, NULL, &dwAvail, NULL);
         if( success && dwAvail > 0 ){ return true; }
         //if we didn't get anything then wait
@@ -215,7 +215,7 @@ void NativeHost::initHostPath()
     }
 
 }
-bool NativeHost::sendMessage(const char* json)
+bool NativeHost::sendMessage(const char* json, int timeout)
 {
     int jsonLen = strlen(json);
     int dataLen = jsonLen + 4;
@@ -238,7 +238,7 @@ bool NativeHost::sendMessage(const char* json)
         return false;
     }
 
-    if(!hostStdOUT.dataAvailable()){
+    if(!hostStdOUT.dataAvailable(timeout)){
         printf("no data available");
         return false;
     }
