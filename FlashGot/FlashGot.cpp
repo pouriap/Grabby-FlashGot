@@ -1331,6 +1331,97 @@ public:
 };
 
 
+
+class DMSDownloadAcceleratorManager : 
+	public DMSupportCOM
+{
+
+protected:
+	const char * getProgId() { return "Tensons.Application.DownloadAcceleratorManager.LinkHandler"; }
+	
+public:
+	const char * getName() { return "Download Accelerator Manager"; }
+
+	void dispatch(const DownloadInfo *downloadInfo)
+	{
+		CookieManager cm(downloadInfo);
+		HELPER(h);
+
+		LinkInfo *links=downloadInfo->links;
+		int linksCount = downloadInfo->linksCount;
+
+		if(linksCount == 1){
+
+			LinkInfo l = links[0];
+			//todo: add useragent to downloadInfo
+			BSTR userAgent = SysAllocString(L"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:73.0) Gecko/20100101 Firefox/73.0");
+			VARIANT v[6];
+			v[5].vt =v[4].vt =v[3].vt = v[2].vt = v[1].vt = v[0].vt = VT_BSTR;
+
+			v[5].bstrVal=l.url;
+			v[4].bstrVal=l.comment;
+			v[3].bstrVal=downloadInfo->referer;
+			v[2].bstrVal=l.cookie;
+			v[1].bstrVal=userAgent;
+			v[0].bstrVal=l.postdata;
+			h.invoke("handleLink3",v,6);
+
+			SysFreeString(userAgent);
+
+		}
+		else if(linksCount>1)
+		{
+			//this does not work for some godforsaken reason 
+			/*
+			int elemnCount = (2 * linksCount) + 3;
+			FGArray fgArray(elemnCount);
+
+			fgArray.addString(downloadInfo->referer);
+			fgArray.addString(downloadInfo->extras[1]);
+			//todo: add useragent to downloadInfo
+			BSTR userAgent = SysAllocString(L"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:73.0) Gecko/20100101 Firefox/73.0");
+			fgArray.addString(userAgent);
+
+			for (int i=0; i < linksCount; i++)
+			{
+				fgArray.addString(links[i].url);
+				fgArray.addString(links[i].comment);
+			}
+
+			VARIANT v[1];
+			fgArray.asVariant(&v[0]);
+
+			h.invoke("handleLinks", v, 1);
+			*/
+
+			std::wstring linksStr = L"";
+			linksStr.append(downloadInfo->referer);//referer
+			linksStr.append(L"\r\n");
+			linksStr.append(downloadInfo->extras[1]);//referer cookies
+			linksStr.append(L"\r\n");
+			//todo: add useragent to downloadInfo
+			linksStr.append(L"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:73.0) Gecko/20100101 Firefox/73.0\r\n");//useragent
+			linksStr.append(L"\r\n");
+			for (int i=0; i < linksCount; i++)
+			{
+				linksStr.append(links[i].url);
+				linksStr.append(L"\r\n");
+				linksStr.append(links[i].comment);
+				linksStr.append(L"\r\n");
+			}
+			linksStr.append(L"\r\n\r\n\r\n");
+
+			VARIANT v[1];
+			v[0].vt = VT_BSTR;
+			v[0].bstrVal = SysAllocString(linksStr.c_str());
+
+			h.invoke("handleLinksString", v, 1);
+
+		}
+	}
+};
+
+
 class DMSDownloadMaster :
 	public DMSWestByte
 {
@@ -1744,6 +1835,7 @@ void DMSFactory::registerAll()
 {
 	add(new DMSBitComet());
 	add(new DMSDownloadAcceleratorPlus());
+	add(new DMSDownloadAcceleratorManager());
 	add(new DMSDownloadMaster());
 	add(new DMSFlashGet());
 	add(new DMSFlashGet2());
