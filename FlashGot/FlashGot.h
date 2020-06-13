@@ -256,11 +256,15 @@ class DMSupport
 protected:
 	
 	static char *findProgram(HKEY baseKey, char *leafPath, char *leafName = "") {
-		long res;
 		HKEY hk;
 		char *exe=NULL;
-		
-		if( (res=RegOpenKeyEx(baseKey,leafPath,0,KEY_QUERY_VALUE,&hk))==ERROR_SUCCESS)
+		long res = RegOpenKeyEx(baseKey,leafPath,0,KEY_QUERY_VALUE,&hk);
+		//if failed try looking in 64bit registry
+		if(res != ERROR_SUCCESS)
+		{
+			res = RegOpenKeyEx(baseKey,leafPath,0,KEY_QUERY_VALUE|KEY_WOW64_64KEY,&hk);
+		}
+		if(res == ERROR_SUCCESS)
 		{
 			char *exepath = leafName;
 			long pathLen=0;	
@@ -454,29 +458,36 @@ public:
 	
 };
 
-
-class DMSSupportNativeHost :
+//TODO: should this be inline?
+class DMSupportNativeHost :
 	public DMSupport
 {
 
 protected:
 	
-	virtual const char * getHostId() = 0;
+	virtual char* getRegPath() = 0;
+
+	std::string getManifPath_(HKEY baseKey)
+	{
+		std::string val = "";
+		char* path = DMSupport::findProgram(baseKey, getRegPath());
+		if(path){
+			val = path;
+		}
+		delete [] path;
+		return val;
+	}
 
 	std::string getManifestPath()
 	{
 		std::string manifestPath = "";
-		std::string leafPath = "Software\\Mozilla\\NativeMessagingHosts\\";
-		leafPath += getHostId();
-		char* path = DMSupport::findProgram(HKEY_CURRENT_USER, (char*)leafPath.c_str());
-		if(path){
-			manifestPath = path;
+		manifestPath = getManifPath_(HKEY_CURRENT_USER);
+		if(manifestPath.size() == 0){
+			manifestPath = getManifPath_(HKEY_LOCAL_MACHINE);
 		}
-		delete [] path;
-
 		return manifestPath;
 	}
-	
+
 public:
 	
 	void check() 
@@ -484,7 +495,7 @@ public:
 		std::string path = getManifestPath();
 		if(path.length() == 0){
 			std::string error = "Native client not available for: ";
-			error += getHostId();
+			error += getRegPath();
 			throw error.c_str();
 		}
 	}

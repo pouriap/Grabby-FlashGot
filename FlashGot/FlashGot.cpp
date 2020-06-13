@@ -374,13 +374,13 @@ public:
 
 
 class DMSFreeDownloadManager :
-	public DMSSupportNativeHost
+	public DMSupportNativeHost
 {
 
 protected:
 
-	const char * getHostId(){ 
-		return "org.freedownloadmanager.fdm5.cnh"; 
+	char * getRegPath(){ 
+		return "Software\\Mozilla\\NativeMessagingHosts\\org.freedownloadmanager.fdm5.cnh"; 
 	}
 
 public:
@@ -1333,91 +1333,72 @@ public:
 
 
 class DMSDownloadAcceleratorManager : 
-	public DMSupportCOM
+	public DMSupportNativeHost
 {
-
 protected:
-	const char * getProgId() { return "Tensons.Application.DownloadAcceleratorManager.LinkHandler"; }
-	
+
+	char * getRegPath(){ 
+		return "Software\\Mozilla\\NativeMessagingHosts\\com.tensons.dam"; 
+	}
+
 public:
-	const char * getName() { return "Download Accelerator Manager"; }
 
-	void dispatch(const DownloadInfo *downloadInfo)
-	{
-		CookieManager cm(downloadInfo);
-		HELPER(h);
+	const char * getName() { 
+		return "Download Accelerator Manager"; 
+	}
 
-		LinkInfo *links=downloadInfo->links;
-		int linksCount = downloadInfo->linksCount;
+	void dispatch(const DownloadInfo *downloadInfo){
 
-		if(linksCount == 1){
+		using namespace ggicci;
 
-			LinkInfo l = links[0];
-			//todo: add useragent to downloadInfo
-			BSTR userAgent = SysAllocString(L"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:73.0) Gecko/20100101 Firefox/73.0");
-			VARIANT v[6];
-			v[5].vt =v[4].vt =v[3].vt = v[2].vt = v[1].vt = v[0].vt = VT_BSTR;
+		long lc = downloadInfo->linksCount;
 
-			v[5].bstrVal=l.url;
-			v[4].bstrVal=l.comment;
-			v[3].bstrVal=downloadInfo->referer;
-			v[2].bstrVal=l.cookie;
-			v[1].bstrVal=userAgent;
-			v[0].bstrVal=l.postdata;
-			h.invoke("handleLink3",v,6);
+		std::string referer = utf8::narrow(downloadInfo->referer);
+		std::string refCookies = utf8::narrow(downloadInfo->extras[1]);
+		Json jsonMsg = Json::Parse("{}");
 
-			SysFreeString(userAgent);
-
-		}
-		else if(linksCount>1)
+		if(lc == 1)
 		{
-			//this does not work for some godforsaken reason 
-			/*
-			int elemnCount = (2 * linksCount) + 3;
-			FGArray fgArray(elemnCount);
-
-			fgArray.addString(downloadInfo->referer);
-			fgArray.addString(downloadInfo->extras[1]);
-			//todo: add useragent to downloadInfo
-			BSTR userAgent = SysAllocString(L"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:73.0) Gecko/20100101 Firefox/73.0");
-			fgArray.addString(userAgent);
-
-			for (int i=0; i < linksCount; i++)
-			{
-				fgArray.addString(links[i].url);
-				fgArray.addString(links[i].comment);
-			}
-
-			VARIANT v[1];
-			fgArray.asVariant(&v[0]);
-
-			h.invoke("handleLinks", v, 1);
-			*/
-
-			std::wstring linksStr = L"";
-			linksStr.append(downloadInfo->referer);//referer
-			linksStr.append(L"\r\n");
-			linksStr.append(downloadInfo->extras[1]);//referer cookies
-			linksStr.append(L"\r\n");
-			//todo: add useragent to downloadInfo
-			linksStr.append(L"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:73.0) Gecko/20100101 Firefox/73.0\r\n");//useragent
-			linksStr.append(L"\r\n");
-			for (int i=0; i < linksCount; i++)
-			{
-				linksStr.append(links[i].url);
-				linksStr.append(L"\r\n");
-				linksStr.append(links[i].comment);
-				linksStr.append(L"\r\n");
-			}
-			linksStr.append(L"\r\n\r\n\r\n");
-
-			VARIANT v[1];
-			v[0].vt = VT_BSTR;
-			v[0].bstrVal = SysAllocString(linksStr.c_str());
-
-			h.invoke("handleLinksString", v, 1);
-
+			jsonMsg.AddProperty("t", Json(2));
+			jsonMsg.AddProperty("c", Json(refCookies));
+			jsonMsg.AddProperty("r", Json(referer));
+			jsonMsg.AddProperty("i", Json(utf8::narrow(downloadInfo->links[0].comment)));
+			jsonMsg.AddProperty("a", Json(""));
+			jsonMsg.AddProperty("u", Json(utf8::narrow(downloadInfo->links[0].url)));
+			jsonMsg.AddProperty("p", Json(utf8::narrow(downloadInfo->links[0].postdata)));
 		}
+		else if(lc > 1)
+		{
+			jsonMsg.AddProperty("t", Json(3));
+			jsonMsg.AddProperty("c", Json(refCookies));
+			jsonMsg.AddProperty("r", Json(referer));
+			jsonMsg.AddProperty("a", Json(""));
+			jsonMsg.AddProperty("p", Json(""));
+			std::string urlsStr = "";
+			for(int i=0; i<lc; i++)
+			{
+				urlsStr.append(utf8::narrow(downloadInfo->links[i].url));
+				urlsStr.append("\n");
+				urlsStr.append(utf8::narrow(downloadInfo->links[i].comment));
+				urlsStr.append("\n");
+			}
+			jsonMsg.AddProperty("u", Json(urlsStr));
+		}
+
+		NativeHost host(getManifestPath(), "dam@tensons.com");
+
+		if(host.init())
+		{
+			host.waitForOutput(5000);
+			//todo: add real user agent 
+			const char* init = "{\"t\":1,\"a\":\"Mozilla/5.0 (Windows NT 6.1; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0\"}";
+			if(host.sendMessage(init)){
+				host.sendMessage(jsonMsg.ToString().c_str());
+			}
+		}
+
+		host.close();
+
 	}
 };
 

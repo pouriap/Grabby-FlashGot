@@ -4,9 +4,8 @@
 #include "jsonla.h"
 #include "utf8.h"
 
-Pipe::Pipe(char* nm)
+Pipe::Pipe()
 {
-    name = nm;
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
     saAttr.bInheritHandle = TRUE;
     saAttr.lpSecurityDescriptor = NULL;
@@ -35,7 +34,7 @@ void Pipe::close()
 }
 
 
-OutputPipe::OutputPipe(char* nm) : Pipe(nm)
+OutputPipe::OutputPipe() : Pipe()
 {
     readFlags = 0 | PIPE_ACCESS_INBOUND;
     writeFlags = FILE_FLAG_OVERLAPPED | FILE_ATTRIBUTE_NORMAL;
@@ -59,7 +58,7 @@ bool OutputPipe::write(const char* data, DWORD dataLen)
 }
 
 
-InputPipe::InputPipe(char* nm) : Pipe(nm)
+InputPipe::InputPipe() : Pipe()
 {
     readFlags = FILE_FLAG_OVERLAPPED | PIPE_ACCESS_INBOUND;
     writeFlags = 0 | FILE_ATTRIBUTE_NORMAL;
@@ -67,7 +66,7 @@ InputPipe::InputPipe(char* nm) : Pipe(nm)
 bool InputPipe::dataAvailable(int timeout){
     DWORD dwAvail;
 	const int intrvl = 200;
-    for(int totalSleep=0; totalSleep < timeout; totalSleep+=intrvl){
+    for(int totalSleep=0; totalSleep <= timeout; totalSleep+=intrvl){
         BOOL success = PeekNamedPipe(readHandle, NULL, NULL, NULL, &dwAvail, NULL);
         if( success && dwAvail > 0 ){ return true; }
         //if we didn't get anything then wait
@@ -117,7 +116,7 @@ bool Process::create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string cm
         TRUE,								// handles are inherited
         processFlags,						// creation flags
         NULL,								// use parent's environment
-        utf8::widen(workDir).c_str(),		// current directory
+        utf8::widen(workDir).c_str(),		// working directory
         &startupInfo,						// STARTUPINFO pointer
         &procInfo							// receives PROCESS_INFORMATIN
     );
@@ -143,8 +142,8 @@ void Process::close()
 
 NativeHost::NativeHost(std::string manifestPath, std::string extensionId) :
     process(),
-    hostStdIN("\\\\.\\pipe\\hostStdIN"),
-    hostStdOUT("\\\\.\\pipe\\hostStdOUT"),
+    hostStdIN(),
+    hostStdOUT(),
     manifPath(manifestPath),
     extId(extensionId),
     hostPath("")
@@ -162,12 +161,10 @@ bool NativeHost::init()
         return false;
     }
 
-    std::string args = manifPath + " " + extId;
-    std::string exe = const_cast<char *>(hostPath.c_str());
-    std::string exeArgs = const_cast<char *>(args.c_str());
-    std::string workDir = const_cast<char *>(hostDir.c_str());
+	//todo: this is for firefox, chrome sends extId + window id
+    std::string args = "\"" + manifPath + "\" " + extId;
 
-    success = process.create(hostStdIN.readHandle, hostStdOUT.writeHandle, exe, exeArgs, workDir);
+    success = process.create(hostStdIN.readHandle, hostStdOUT.writeHandle, hostPath, args, hostDir);
 
     return success;
 
@@ -270,6 +267,18 @@ bool NativeHost::sendMessage(const char* json, int timeout)
     }
 
     return true;
+}
+void NativeHost::waitForOutput(int timeout)
+{
+	hostStdOUT.dataAvailable(timeout);
+}
+void NativeHost::readAll()
+{
+	DWORD dwRead;
+    CHAR chBuf[BUF2K];
+	while(hostStdOUT.dataAvailable(0)){
+		hostStdOUT.read(chBuf, BUF2K, dwRead);
+	}
 }
 void NativeHost::close()
 {

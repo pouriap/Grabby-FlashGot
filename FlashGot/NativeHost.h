@@ -15,9 +15,8 @@ class Pipe{
 protected:
     SECURITY_ATTRIBUTES saAttr;
     DWORD readFlags, writeFlags;
-    std::string name;
     //protected constructor because we don't want Pipe to be directly instantiated
-    Pipe(char* nm);
+    Pipe();
 public:
     HANDLE readHandle, writeHandle;
     virtual ~Pipe(){close();}
@@ -27,13 +26,13 @@ public:
 
 class OutputPipe: public Pipe{
 public:
-    OutputPipe(char* nm);
+    OutputPipe();
     bool write(const char* data, DWORD dataLen);
 };
 
 class InputPipe: public Pipe{
 public:
-    InputPipe(char* nm);
+    InputPipe();
     bool dataAvailable(int timeout);
     bool read(char* readBuf, int bufLen, DWORD& dwRead);
 };
@@ -59,6 +58,8 @@ public:
     virtual ~NativeHost(){close();}
     bool init();
 	bool sendMessage(const char* json, int timeout=MSG_RESPONSE_TIMEOUT);
+	void waitForOutput(int timeout);
+	void readAll();
     void close();
 };
 
