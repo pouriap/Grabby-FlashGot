@@ -105,7 +105,7 @@ bool Process::create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string cm
     startupInfo.hStdOutput = hStdOUT;
     startupInfo.hStdError = hStdOUT;
 
-	DWORD processFlags = CREATE_NO_WINDOW;
+	DWORD processFlags = CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED;
 
     //todo: support hosts that are scripts like .bat
     BOOL bSuccess = CreateProcessW(
@@ -124,12 +124,30 @@ bool Process::create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string cm
 	//we don't need these
     CloseHandle(hStdIN);
     CloseHandle(hStdOUT);
-    CloseHandle(procInfo.hThread);
+    //CloseHandle(procInfo.hThread);
 
     if(!bSuccess){
         printf("process creation failed: %d\n", GetLastError());
         return false;
     }
+
+	HANDLE hJob = CreateJobObjectW(NULL, NULL);
+	JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobInfo;
+	jobInfo.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_BREAKAWAY_OK;
+
+	bSuccess = SetInformationJobObject(
+		hJob, 
+		JobObjectExtendedLimitInformation, 
+		&jobInfo, 
+		sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)
+	);
+
+	if(bSuccess){
+		AssignProcessToJobObject(hJob, procInfo.hProcess);
+	}
+
+	ResumeThread(procInfo.hThread);
+	CloseHandle(procInfo.hThread);
 
     return true;
 }
@@ -212,13 +230,14 @@ void NativeHost::initHostPath()
     }
 
 }
+
 bool NativeHost::sendMessage(const char* json, int timeout)
 {
     int jsonLen = strlen(json);
     int dataLen = jsonLen + 4;
     char* data = new char[dataLen];
 
-    // Native messaging protocol requires message length as a 4-byte integer prepended to the JSON string
+	// Native messaging protocol requires message length as a 4-byte integer prepended to the JSON string
     data[0] = char(((jsonLen>>0) & 0xFF));
     data[1] = char(((jsonLen>>8) & 0xFF));
     data[2] = char(((jsonLen>>16) & 0xFF));
