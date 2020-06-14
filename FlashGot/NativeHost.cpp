@@ -91,7 +91,7 @@ bool InputPipe::read(char* readBuf, int bufLen, DWORD& dwRead)
 }
 
 
-bool Process::create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string cmd, std::string args, std::string workDir)
+bool Process::create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string exe, std::string args, std::string workDir)
 {
     STARTUPINFOW startupInfo;
 
@@ -105,11 +105,16 @@ bool Process::create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string cm
     startupInfo.hStdOutput = hStdOUT;
     startupInfo.hStdError = hStdOUT;
 
+	//Firefox creates processes with only args and with no command line (exe path) so they expect 3 arguments
+	//the first one being the path to the exe itself, 
+	//but since I'm dead set on using a command line I'm adding the first argument here like this
+	args = "\"" + exe + "\" " + args;
+
 	DWORD processFlags = CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED;
 
     //todo: support hosts that are scripts like .bat
     BOOL bSuccess = CreateProcessW(
-        utf8::widen(cmd).c_str(),
+        utf8::widen(exe).c_str(),
         const_cast<wchar_t *>(utf8::widen(args).c_str()),            // command line
         NULL,								// process security attributes
         NULL,								// primary thread security attributes
@@ -130,7 +135,7 @@ bool Process::create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string cm
         printf("process creation failed: %d\n", GetLastError());
         return false;
     }
-
+	
 	HANDLE hJob = CreateJobObjectW(NULL, NULL);
 	JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobInfo;
 	jobInfo.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_BREAKAWAY_OK;
@@ -242,6 +247,7 @@ bool NativeHost::sendMessage(const char* json, int timeout)
     data[1] = char(((jsonLen>>8) & 0xFF));
     data[2] = char(((jsonLen>>16) & 0xFF));
     data[3] = char(((jsonLen>>24) & 0xFF));
+
     // Add the JSON after the length
     int i;
     for(i=0; i<jsonLen; i++){

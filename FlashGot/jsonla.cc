@@ -20,13 +20,13 @@ Json Json::Parse(const char* json_string)
 	return retval;
 }
 
-Json::Json() : kind_(kNull), data_(0) { }
-Json::Json(int num) : kind_(kNumber), data_(new double(num)) { }
-Json::Json(double num) : kind_(kNumber), data_(new double(num)) { }
-Json::Json(const string& str) : kind_(kString), data_(new string(str)) { }
-Json::Json(const char* str) : kind_(kString), data_(new string(str)) { }
-Json::Json(bool boo) : kind_(kBool), data_(new bool(boo)) { }
-Json::Json(const Json& rhs) : kind_(kNull), data_(0)
+Json::Json() : kind_(kNull), data_(0), lastInsertId_(0) { }
+Json::Json(int num) : kind_(kNumber), data_(new double(num)), lastInsertId_(0) { }
+Json::Json(double num) : kind_(kNumber), data_(new double(num)), lastInsertId_(0) { }
+Json::Json(const string& str) : kind_(kString), data_(new string(str)), lastInsertId_(0) { }
+Json::Json(const char* str) : kind_(kString), data_(new string(str)), lastInsertId_(0) { }
+Json::Json(bool boo) : kind_(kBool), data_(new bool(boo)), lastInsertId_(0) { }
+Json::Json(const Json& rhs) : kind_(kNull), data_(0), lastInsertId_(0)
 {
 	TRACK("Json::Json(const Json& rhs)");
 	DoDeepCopy(rhs);
@@ -41,19 +41,21 @@ Json& Json::operator = (const Json& rhs)
 	return *this;
 }
 
-Json::Json(Json* rhs) : kind_(rhs->kind_), data_(rhs->data_)
+Json::Json(Json* rhs) : kind_(rhs->kind_), data_(rhs->data_), lastInsertId_(rhs->lastInsertId_), order_(rhs->order_)
 {
 	TRACK("Json::Json(Json* rhs)");
 	rhs->data_ = 0;
 }
 
-Json::Json(ObjectData* obj) : kind_(kObject), data_(obj) { }
-Json::Json(ArrayData* arr) : kind_(kArray), data_(arr) { }
+Json::Json(ObjectData* obj) : kind_(kObject), data_(obj), lastInsertId_(0) { }
+Json::Json(ArrayData* arr) : kind_(kArray), data_(arr), lastInsertId_(0) { }
 
 void Json::DoDeepCopy(const Json& rhs)
 {
 	TRACK("void Json::DoDeepCopy(const Json& rhs)");
 	kind_ = rhs.kind_;
+	lastInsertId_ = rhs.lastInsertId_;
+	order_ = rhs.order_;
 	switch (kind_)
 	{
 		case kNull: data_ = 0; break;
@@ -187,6 +189,7 @@ Json& Json::AddProperty(const std::string& key, const Json& value)
 {
 	TRACK("Json& Json::AddProperty(const std::string& key, const Json& value)");
 	(*this)[key.c_str()] = value;
+	order_[lastInsertId_++] = key;
 	return *this;
 }
 
@@ -331,6 +334,54 @@ string Json::ToString() const
 		default : break;
 	}
 	return oss.str();
+}
+
+string Json::ToStringOrderedTrimmed() const
+{
+	ostringstream oss;
+	switch (kind_)
+	{
+		case kNumber: oss << *static_cast<double*>(data_); break;
+		case kString: oss << "\"" << *static_cast<string*>(data_) << "\""; break;
+		case kBool: oss << boolalpha << *static_cast<bool*>(data_); break;
+		case kNull: oss << "null"; break;
+		case kObject:
+		{
+			ObjectData& data = *CAST_JSON_OBJ(data_);
+			oss << "{";
+			bool unique = true;
+
+			for(int i=0; i<lastInsertId_; i++)
+			{
+				string key = order_.at(i);
+				ObjectData::const_iterator cit = data.find(key);
+				oss << (unique ? "\"" : ",\"") << cit->first << "\":" << cit->second->ToString();
+				unique = false;
+			}
+
+			oss << "}";
+			break;
+		}
+		case kArray:
+		{
+			ArrayData& data = *CAST_JSON_ARR(data_);
+			ArrayData::const_iterator cit = data.begin();
+			oss << "[ ";
+			bool unique = true;
+			for (; cit != data.end(); ++cit)
+			{
+				oss << (unique ? "" : ", ") << (*cit)->ToString();
+				unique = false;
+			}
+			oss << " ]";
+			break;
+		}
+		default : break;
+	}
+	return oss.str();
+
+
+
 }
 
 /* Private Members */

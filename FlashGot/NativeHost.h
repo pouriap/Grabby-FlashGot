@@ -9,6 +9,8 @@
 #define BUF2K 2048
 #define BUF4K 4096
 
+#define DEFAULT_UA "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:73.0) Gecko/20100101 Firefox/73.0"
+
 #define MSG_RESPONSE_TIMEOUT 5000
 
 class Pipe{
@@ -42,7 +44,7 @@ private:
     PROCESS_INFORMATION procInfo;
 public:
     virtual ~Process(){close();}
-    bool create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string cmd, std::string args, std::string workDir);
+    bool create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string exe, std::string args, std::string workDir);
     void close();
 };
 

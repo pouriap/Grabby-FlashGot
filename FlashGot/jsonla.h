@@ -443,12 +443,16 @@ namespace ggicci
 		 */
 		std::string ToString() const;
 
+		//**** same as ToString() but with the order of insertion
+		std::string ToStringOrderedTrimmed() const;
+
 	private:
 		#define CAST_JSON_OBJ(DATA) (static_cast<ObjectData*>(DATA))
 		#define CAST_JSON_ARR(DATA) (static_cast<ArrayData*>(DATA))
 
 		typedef std::vector<Json*> ArrayData;
 		typedef std::map<std::string, Json*> ObjectData;
+		typedef std::map<int, std::string> ObjectOrder;
 		typedef std::pair<std::string, Json*> Pair;
 
 		/**
@@ -699,6 +703,8 @@ namespace ggicci
 		
 		Kind kind_;		///< which kind of data this Json object represents
 		void *data_;	///< the real data held by the Json object
+		ObjectOrder order_;		///***order of stuff in this object
+		int lastInsertId_;
 	};
 
 }

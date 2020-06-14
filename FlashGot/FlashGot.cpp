@@ -225,6 +225,68 @@ protected:
 };
 
 
+class DMSFlareGet : 
+	public DMSupportNativeHost
+{
+protected:
+
+	char * getRegPath(){ 
+		return "SOFTWARE\\Mozilla\\NativeMessagingHosts\\com.flareget.flareget"; 
+	}
+
+public:
+
+	const char * getName() { 
+		return "FlareGet"; 
+	}
+
+	void dispatch(const DownloadInfo *downloadInfo){
+
+		using namespace ggicci;
+
+		long lc = downloadInfo->linksCount;
+
+		//doesn't not support more than one link
+		if(lc>1)
+		{ 
+			return; 
+		}
+
+		std::string referer = utf8::narrow(downloadInfo->referer);
+		std::string refCookies = utf8::narrow(downloadInfo->extras[1]);
+
+		Json *dlMessages = new Json[lc];
+
+		for(int i=0; i<lc; i++){
+			Json jsonMsg = Json::Parse("{}");
+			jsonMsg.AddProperty("url", Json(utf8::narrow(downloadInfo->links[i].url)));
+			jsonMsg.AddProperty("cookies", Json(downloadInfo->links[i].cookie));
+			//todo: add real user agent
+			jsonMsg.AddProperty("useragent", Json(DEFAULT_UA));
+			jsonMsg.AddProperty("filename", Json(""));
+			jsonMsg.AddProperty("filesize", Json(""));
+			jsonMsg.AddProperty("referrer", Json(referer));
+			jsonMsg.AddProperty("postdata", Json(utf8::narrow(downloadInfo->links[i].postdata)));
+			jsonMsg.AddProperty("vid", Json(""));
+			jsonMsg.AddProperty("status", Json("OK"));
+			dlMessages[i] = jsonMsg;
+		}
+
+		NativeHost host(getManifestPath(), "support@flareget.com");
+
+		for(int i=0; i<lc; i++)
+		{
+			if(host.init()){
+				std::string msg = dlMessages[i].ToStringOrderedTrimmed();
+				host.sendMessage(msg.c_str());
+			}
+			host.close();
+		}
+
+		delete [] dlMessages;
+
+	}
+};
 
 
 class DMSFlashGet :
@@ -412,7 +474,7 @@ public:
 			dl.AddProperty("url", Json(url));
 			dl.AddProperty("originalUrl", Json(url));
 			dl.AddProperty("httpReferer", Json(referer));
-			dl.AddProperty("userAgent", Json("Mozilla/5.0 (Windows NT 6.1; rv:56.0) Gecko/20100101 Firefox/56.0"));
+			dl.AddProperty("userAgent", Json(DEFAULT_UA));
 			dl.AddProperty("httpCookies", Json(cookie));
 			//todo: what's this?
 			dl.AddProperty("youtubeChannelVideosDownload", Json(0));
@@ -1360,29 +1422,32 @@ public:
 		if(lc == 1)
 		{
 			jsonMsg.AddProperty("t", Json(2));
+			jsonMsg.AddProperty("u", Json(utf8::narrow(downloadInfo->links[0].url)));
 			jsonMsg.AddProperty("c", Json(refCookies));
 			jsonMsg.AddProperty("r", Json(referer));
+			jsonMsg.AddProperty("p", Json(utf8::narrow(downloadInfo->links[0].postdata)));
 			jsonMsg.AddProperty("i", Json(utf8::narrow(downloadInfo->links[0].comment)));
 			jsonMsg.AddProperty("a", Json(""));
-			jsonMsg.AddProperty("u", Json(utf8::narrow(downloadInfo->links[0].url)));
-			jsonMsg.AddProperty("p", Json(utf8::narrow(downloadInfo->links[0].postdata)));
 		}
 		else if(lc > 1)
 		{
 			jsonMsg.AddProperty("t", Json(3));
-			jsonMsg.AddProperty("c", Json(refCookies));
-			jsonMsg.AddProperty("r", Json(referer));
-			jsonMsg.AddProperty("a", Json(""));
-			jsonMsg.AddProperty("p", Json(""));
 			std::string urlsStr = "";
 			for(int i=0; i<lc; i++)
 			{
 				urlsStr.append(utf8::narrow(downloadInfo->links[i].url));
-				urlsStr.append("\n");
+				urlsStr.append("\\n");
 				urlsStr.append(utf8::narrow(downloadInfo->links[i].comment));
-				urlsStr.append("\n");
+				//the last url should not have a new line
+				if(lc-i>1){
+					urlsStr.append("\\n");
+				}
 			}
 			jsonMsg.AddProperty("u", Json(urlsStr));
+			jsonMsg.AddProperty("c", Json(refCookies));
+			jsonMsg.AddProperty("r", Json(referer));
+			jsonMsg.AddProperty("p", Json(""));
+			jsonMsg.AddProperty("a", Json(""));
 		}
 
 		NativeHost host(getManifestPath(), "dam@tensons.com");
@@ -1391,9 +1456,9 @@ public:
 		{
 			host.waitForOutput(5000);
 			//todo: add real user agent 
-			const char* init = "{\"t\":1,\"a\":\"Mozilla/5.0 (Windows NT 6.1; WOW64; rv:56.0) Gecko/20100101 Firefox/56.0\"}";
+			const char* init = "{\"t\":1,\"a\":\"Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0\"}";
 			if(host.sendMessage(init)){
-				host.sendMessage(jsonMsg.ToString().c_str());
+				host.sendMessage(jsonMsg.ToStringOrderedTrimmed().c_str());
 			}
 		}
 
@@ -1818,6 +1883,7 @@ void DMSFactory::registerAll()
 	add(new DMSDownloadAcceleratorPlus());
 	add(new DMSDownloadAcceleratorManager());
 	add(new DMSDownloadMaster());
+	add(new DMSFlareGet());
 	add(new DMSFlashGet());
 	add(new DMSFlashGet2());
 	add(new DMSFlashGet2X());
@@ -2019,7 +2085,7 @@ int performDownload(char *fname)
 				file_shred(fname);
 			} else {
 				remove(done);
-				rename(fname, done);
+				//rename(fname, done);
 			}
 		}
 	}
