@@ -225,6 +225,88 @@ protected:
 };
 
 
+class DMSEagleGet : 
+	public DMSupportNativeHost
+{
+protected:
+
+	char * getRegPath(){ 
+		return "Software\\Mozilla\\NativeMessagingHosts\\eagleget"; 
+	}
+
+public:
+
+	const char * getName() { 
+		return "EagleGet"; 
+	}
+
+	void dispatch(const DownloadInfo *downloadInfo)
+	{
+		using namespace ggicci;
+
+		int lc = downloadInfo->linksCount;
+		std::string referer = utf8::narrow(downloadInfo->referer);
+		std::string refCookies = utf8::narrow(downloadInfo->extras[1]);
+
+		Json params = Json::Parse("{}");
+
+		//todo: add real user agent
+		params.AddProperty("agent", Json(DEFAULT_UA));
+		params.AddProperty("contentLength", Json(""));
+		params.AddProperty("contentType", Json(""));
+		params.AddProperty("disposition", Json(""));
+		params.AddProperty("reffer", Json(referer));
+
+		if(lc == 1)
+		{
+			LinkInfo link = downloadInfo->links[0];
+			params.AddProperty("cookie", Json(utf8::narrow(link.cookie)));
+			//todo: add file name
+			params.AddProperty("fileName", Json(""));
+			params.AddProperty("postData", Json(utf8::narrow(link.postdata)));
+			params.AddProperty("url", Json(utf8::narrow(link.url)));
+		}
+		else if(lc > 1)
+		{
+			params.AddProperty("cookie", Json(refCookies));
+			//todo: add file name
+			params.AddProperty("fileName", Json(""));
+			params.AddProperty("postData", Json(""));
+
+			std::string urls = "\\\\F ";
+			LinkInfo *links = downloadInfo->links;
+			for(int i=0; i<lc; i++)
+			{
+				urls.append(utf8::narrow(links[i].url));
+				urls.append("|");
+				urls.append(utf8::narrow(links[i].comment));
+				urls.append("\\n");
+			}
+			urls.append("|");
+			urls.append(referer);
+			urls.append("|");
+			params.AddProperty("url", Json(urls));
+		}
+
+		Json jsonMsg = Json::Parse("{}");
+		jsonMsg.AddProperty("name", Json("download"));
+		jsonMsg.AddProperty("paramters", params);
+
+		NativeHost host(getManifestPath(), "eagleget_ffext@eagleget.com");
+
+		if(host.init())
+		{
+			const char* exit = "{\"name\":\"exit\",\"paramters\":[]}";
+			host.sendMessage(jsonMsg.ToString().c_str(), 100);
+			host.sendMessage(exit, 100);
+		}
+
+		host.close();
+
+	}
+};
+
+
 class DMSFlareGet : 
 	public DMSupportNativeHost
 {
@@ -260,7 +342,7 @@ public:
 		for(int i=0; i<lc; i++){
 			Json jsonMsg = Json::Parse("{}");
 			jsonMsg.AddProperty("url", Json(utf8::narrow(downloadInfo->links[i].url)));
-			jsonMsg.AddProperty("cookies", Json(downloadInfo->links[i].cookie));
+			jsonMsg.AddProperty("cookies", Json(utf8::narrow(downloadInfo->links[i].cookie)));
 			//todo: add real user agent
 			jsonMsg.AddProperty("useragent", Json(DEFAULT_UA));
 			jsonMsg.AddProperty("filename", Json(""));
@@ -1883,6 +1965,7 @@ void DMSFactory::registerAll()
 	add(new DMSDownloadAcceleratorPlus());
 	add(new DMSDownloadAcceleratorManager());
 	add(new DMSDownloadMaster());
+	add(new DMSEagleGet());
 	add(new DMSFlareGet());
 	add(new DMSFlashGet());
 	add(new DMSFlashGet2());
