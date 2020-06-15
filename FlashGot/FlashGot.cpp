@@ -810,6 +810,58 @@ public:
 };
 
 
+class DMSGetGo : 
+	public DMSupportNativeHost
+{
+protected:
+
+	char * getRegPath(){ 
+		return "SOFTWARE\\Mozilla\\NativeMessagingHosts\\GetGoExtensionNative"; 
+	}
+
+public:
+
+	const char * getName() { 
+		return "GetGo"; 
+	}
+
+	void dispatch(const DownloadInfo *downloadInfo)
+	{
+		int lc = downloadInfo->linksCount;
+		LinkInfo *links = downloadInfo->links;
+		std::string data = "type:batchDownload||data:[";
+		for(int i=0; i<lc; i++)
+		{
+			data.append("{\"url\":\"");
+			data.append(utf8::narrow(links[i].url));
+			data.append("\",\"type\":\"");
+			//todo: add
+			//data.append(utf8::narrow(links[i].extension));
+			data.append("ext");
+			data.append("\",\"size\":\"\",\"name\":\"");
+			//todo: add
+			//data.append(utf8::narrow(links[i].filename));
+			data.append("name");
+			data += std::to_string((long double)i);
+			data.append("\"}");
+			if(lc-i>1){
+				data.append(",");
+			}
+		}
+		data.append("]||");
+
+		NativeHost host(getManifestPath(), "dev@getgosoft.com");
+
+		if(host.init())
+		{
+			host.sendMessage(data.c_str());
+		}
+
+		host.close();
+	}
+};
+
+
 class DMSGetRight :
 	public DMSupport
 {
@@ -1973,6 +2025,7 @@ void DMSFactory::registerAll()
 	add(new DMSFreeDownloadManager());
 	add(new DMSFreeDownloadManager3());
 	add(new DMSFreshDownload());
+	add(new DMSGetGo());
 	add(new DMSGetRight());
 	add(new DMSGigaGet());
 	add(new DMSHiDownload());

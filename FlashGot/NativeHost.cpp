@@ -105,16 +105,20 @@ bool Process::create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string ex
     startupInfo.hStdOutput = hStdOUT;
     startupInfo.hStdError = hStdOUT;
 
-	//Firefox creates processes with only args and with no command line (exe path) so they expect 3 arguments
-	//the first one being the path to the exe itself, 
-	//but since I'm dead set on using a command line I'm adding the first argument here like this
 	args = "\"" + exe + "\" " + args;
 
-	DWORD processFlags = CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED;
+	//is the client a bat file?
+	std::string ext = ".bat";
+	if(exe.compare(exe.size() - ext.size(), ext.size(), ext) == 0)
+	{
+		args = "cmd.exe /s/c \"" + args + "\"";
+	}
+
+	DWORD processFlags = CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT;
 
     //todo: support hosts that are scripts like .bat
     BOOL bSuccess = CreateProcessW(
-        utf8::widen(exe).c_str(),
+		NULL,
         const_cast<wchar_t *>(utf8::widen(args).c_str()),            // command line
         NULL,								// process security attributes
         NULL,								// primary thread security attributes
@@ -129,30 +133,12 @@ bool Process::create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string ex
 	//we don't need these
     CloseHandle(hStdIN);
     CloseHandle(hStdOUT);
-    //CloseHandle(procInfo.hThread);
+    CloseHandle(procInfo.hThread);
 
     if(!bSuccess){
         printf("process creation failed: %d\n", GetLastError());
         return false;
     }
-	
-	HANDLE hJob = CreateJobObjectW(NULL, NULL);
-	JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobInfo;
-	jobInfo.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_BREAKAWAY_OK;
-
-	bSuccess = SetInformationJobObject(
-		hJob, 
-		JobObjectExtendedLimitInformation, 
-		&jobInfo, 
-		sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)
-	);
-
-	if(bSuccess){
-		AssignProcessToJobObject(hJob, procInfo.hProcess);
-	}
-
-	ResumeThread(procInfo.hThread);
-	CloseHandle(procInfo.hThread);
 
     return true;
 }
@@ -223,6 +209,7 @@ void NativeHost::initHostPath()
     char pDrive[_MAX_DRIVE], pDir[_MAX_DIR], pFilename[_MAX_FNAME], pExt[_MAX_EXT];
     _splitpath_s(path.c_str(), pDrive, _MAX_DRIVE, pDir, _MAX_DIR, pFilename, _MAX_FNAME, pExt, _MAX_EXT);
 
+	
     // if host path is relative
     if(strcmp(pDrive, "") == 0){
         hostPath.append(mDrive).append(mDir).append(path);
@@ -233,6 +220,7 @@ void NativeHost::initHostPath()
         hostPath.append(path);
         hostDir.append(pDrive).append(pDir);
     }
+	
 
 }
 
