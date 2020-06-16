@@ -829,6 +829,7 @@ public:
 		std::string data = "type:batchDownload||data:[";
 		for(int i=0; i<lc; i++)
 		{
+			//todo: file name when called from browser has additional gibberish characters
 			//this download manager is insane and needs to be fed the name part of the file and extension part of the file separately
 			std::string fullname = utf8::narrow(links[i].filename);
 			std::string name = fullname.substr(0, fullname.find_last_of("."));
@@ -1286,7 +1287,7 @@ public:
 				vstr.bstrVal=parms[j++];
 				SafeArrayPutElement(psaa[a], ix, &vstr);
 			}
-			j+=2; // skipping cookie & postData;
+			j+=4; // skipping cookie & postData & filename & extension;
 		}
 		
 		//AddList(referrer,urls, remarks);
@@ -1940,7 +1941,7 @@ public:
 		{
 			CookieManager cm(downloadInfo);
 			char cmdLine[32767];
-
+			//todo: what is this op_one? it doesn't work with dlgrab
 			if(downloadInfo->opType==OP_ONE) 
 			{
 				try // try COM first, to overcome command line bug in latest (1.25 - 0118) build
@@ -2024,7 +2025,7 @@ void DMSFactory::registerAll()
 	add(new DMSGetGo());
 	add(new DMSGetRight());
 	add(new DMSGigaGet());
-	add(new DMSHiDownload());
+	//add(new DMSHiDownload());
 	add(new DMSInstantGet());
 	add(new DMSInternetDownloadAccelerator());
 	add(new DMSInternetDownloadManager());
@@ -2034,14 +2035,14 @@ void DMSFactory::registerAll()
 	add(new DMSNetAnts());
 	add(new DMSNet_Transport());
 	add(new DMSNet_Transport2());
-	add(new DMSOrbit());
+	//add(new DMSOrbit());
 	add(new DMSReGet());
 	add(new DMSReGet_Legacy());
 	add(new DMSStarDownloader());
 	add(new DMSTrueDownloader());
 	add(new DMSThunder());
 	add(new DMSThunderOld());
-	add(new DMSWellGet());
+	//add(new DMSWellGet());
 	add(new DMSwxDownloadFast());
 }
 
