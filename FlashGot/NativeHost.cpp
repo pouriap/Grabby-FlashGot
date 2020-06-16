@@ -116,7 +116,6 @@ bool Process::create(const HANDLE &hStdIN, const HANDLE &hStdOUT, std::string ex
 
 	DWORD processFlags = CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT;
 
-    //todo: support hosts that are scripts like .bat
     BOOL bSuccess = CreateProcessW(
 		NULL,
         const_cast<wchar_t *>(utf8::widen(args).c_str()),            // command line
@@ -260,8 +259,8 @@ bool NativeHost::sendMessage(const char* json, int timeout)
         return false;
     }
 
-    //todo: remove in production
-    //remove first four bytes of size data
+#ifdef _DEBUG 
+	//remove first four bytes of size data
     for(i=0; i<dwRead-4; i++){
         chBuf[i] = chBuf[i+4];
     }
@@ -278,6 +277,7 @@ bool NativeHost::sendMessage(const char* json, int timeout)
         printf("redirecting failed: %d\n", GetLastError());
         return false;
     }
+#endif
 
     return true;
 }

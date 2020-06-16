@@ -247,11 +247,11 @@ public:
 		int lc = downloadInfo->linksCount;
 		std::string referer = utf8::narrow(downloadInfo->referer);
 		std::string refCookies = utf8::narrow(downloadInfo->extras[1]);
+		std::string useragent = utf8::narrow(downloadInfo->extras[4]);
 
 		Json params = Json::Parse("{}");
 
-		//todo: add real user agent
-		params.AddProperty("agent", Json(DEFAULT_UA));
+		params.AddProperty("agent", Json(useragent));
 		params.AddProperty("contentLength", Json(""));
 		params.AddProperty("contentType", Json(""));
 		params.AddProperty("disposition", Json(""));
@@ -261,15 +261,13 @@ public:
 		{
 			LinkInfo link = downloadInfo->links[0];
 			params.AddProperty("cookie", Json(utf8::narrow(link.cookie)));
-			//todo: add file name
-			params.AddProperty("fileName", Json(""));
+			params.AddProperty("fileName", Json(utf8::narrow(link.filename)));
 			params.AddProperty("postData", Json(utf8::narrow(link.postdata)));
 			params.AddProperty("url", Json(utf8::narrow(link.url)));
 		}
 		else if(lc > 1)
 		{
 			params.AddProperty("cookie", Json(refCookies));
-			//todo: add file name
 			params.AddProperty("fileName", Json(""));
 			params.AddProperty("postData", Json(""));
 
@@ -279,7 +277,7 @@ public:
 			{
 				urls.append(utf8::narrow(links[i].url));
 				urls.append("|");
-				urls.append(utf8::narrow(links[i].comment));
+				urls.append(utf8::narrow(links[i].filename));
 				urls.append("\\n");
 			}
 			urls.append("|");
@@ -336,6 +334,7 @@ public:
 
 		std::string referer = utf8::narrow(downloadInfo->referer);
 		std::string refCookies = utf8::narrow(downloadInfo->extras[1]);
+		std::string useragent = utf8::narrow(downloadInfo->extras[4]);
 
 		Json *dlMessages = new Json[lc];
 
@@ -343,9 +342,8 @@ public:
 			Json jsonMsg = Json::Parse("{}");
 			jsonMsg.AddProperty("url", Json(utf8::narrow(downloadInfo->links[i].url)));
 			jsonMsg.AddProperty("cookies", Json(utf8::narrow(downloadInfo->links[i].cookie)));
-			//todo: add real user agent
-			jsonMsg.AddProperty("useragent", Json(DEFAULT_UA));
-			jsonMsg.AddProperty("filename", Json(""));
+			jsonMsg.AddProperty("useragent", Json(useragent));
+			jsonMsg.AddProperty("filename", Json(utf8::narrow(downloadInfo->links[i].filename)));
 			jsonMsg.AddProperty("filesize", Json(""));
 			jsonMsg.AddProperty("referrer", Json(referer));
 			jsonMsg.AddProperty("postdata", Json(utf8::narrow(downloadInfo->links[i].postdata)));
@@ -541,6 +539,7 @@ public:
 		if(lc<1) return;
 
 		std::string referer = utf8::narrow(downloadInfo->referer);
+		std::string useragent = utf8::narrow(downloadInfo->extras[4]);
 
 		Json jsonMsg = Json::Parse("{}");
 		jsonMsg.AddProperty("id", Json("4"));
@@ -549,16 +548,14 @@ public:
 		Json downloads = Json::Parse("[]");
 		for(int i=0; i<lc; i++){
 			//todo: add post data
-			//todo: add user agent
 			std::string cookie = utf8::narrow(downloadInfo->links[i].cookie);
 			std::string url = utf8::narrow(downloadInfo->links[i].url);
 			Json dl = Json::Parse("{}");
 			dl.AddProperty("url", Json(url));
 			dl.AddProperty("originalUrl", Json(url));
 			dl.AddProperty("httpReferer", Json(referer));
-			dl.AddProperty("userAgent", Json(DEFAULT_UA));
+			dl.AddProperty("userAgent", Json(useragent));
 			dl.AddProperty("httpCookies", Json(cookie));
-			//todo: what's this?
 			dl.AddProperty("youtubeChannelVideosDownload", Json(0));
 			downloads.Push(dl);
 		}
@@ -832,17 +829,15 @@ public:
 		std::string data = "type:batchDownload||data:[";
 		for(int i=0; i<lc; i++)
 		{
+			//this download manager is insane and needs to be fed the name part of the file and extension part of the file separately
+			std::string fullname = utf8::narrow(links[i].filename);
+			std::string name = fullname.substr(0, fullname.find_last_of("."));
 			data.append("{\"url\":\"");
 			data.append(utf8::narrow(links[i].url));
 			data.append("\",\"type\":\"");
-			//todo: add
-			//data.append(utf8::narrow(links[i].extension));
-			data.append("ext");
+			data.append(utf8::narrow(links[i].extension));
 			data.append("\",\"size\":\"\",\"name\":\"");
-			//todo: add
-			//data.append(utf8::narrow(links[i].filename));
-			data.append("name");
-			data += std::to_string((long double)i);
+			data.append(name);
 			data.append("\"}");
 			if(lc-i>1){
 				data.append(",");
@@ -1551,6 +1546,8 @@ public:
 
 		std::string referer = utf8::narrow(downloadInfo->referer);
 		std::string refCookies = utf8::narrow(downloadInfo->extras[1]);
+		std::string useragent = utf8::narrow(downloadInfo->extras[4]);
+
 		Json jsonMsg = Json::Parse("{}");
 
 		if(lc == 1)
@@ -1589,9 +1586,8 @@ public:
 		if(host.init())
 		{
 			host.waitForOutput(5000);
-			//todo: add real user agent 
-			const char* init = "{\"t\":1,\"a\":\"Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0\"}";
-			if(host.sendMessage(init)){
+			std::string init = "{\"t\":1,\"a\":\"" + useragent + "\"}";
+			if(host.sendMessage(init.c_str())){
 				host.sendMessage(jsonMsg.ToStringOrderedTrimmed().c_str());
 			}
 		}
@@ -2145,7 +2141,7 @@ void processJobFile(FILE *f)
 		{
 			parseHeader(&downloadInfo, header_buf);
 			int linksCount=downloadInfo.linksCount;
-			int parmsCount = 1 + linksCount * 4 + EXTRAS_COUNT; // referer + (url + info + cookie + postdata) * 4 + referer cookie + referer referer :-)
+			int parmsCount = 1 + linksCount * 6 + EXTRAS_COUNT; // referer + (url + info + cookie + postdata + filename + ext) * 6 + referer cookie + referer referer + useragent :-)
 
 			bstr_t *parms=downloadInfo.rawParms=new bstr_t[parmsCount];
 			

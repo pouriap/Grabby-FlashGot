@@ -23,7 +23,7 @@ extern CComModule _Module;
 #define BUF4K 4096
 
 
-#define VERSION "0.7.0b"
+#define VERSION "0.11.0b"
 
 #define DMS_POLL_DELAY 100
 #define DMS_POLL_TIMEOUT 60000
@@ -38,9 +38,11 @@ typedef struct _LinkInfo
 	bstr_t comment;
 	bstr_t cookie;
 	bstr_t postdata;
+	bstr_t filename;
+	bstr_t extension;
 } LinkInfo;
 
-#define EXTRAS_COUNT 5
+#define EXTRAS_COUNT 6
 
 typedef struct _DownloadInfo 
 {
