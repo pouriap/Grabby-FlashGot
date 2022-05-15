@@ -576,21 +576,26 @@ public:
 	
 	unsigned int checkAll() {
 		unsigned int retVal=0;
-		fprintf(stdout,"FlashGot for Download Grab v%s\r\n",VERSION);
 		FGCOMGuard::addClient();
+		ggicci::Json json = ggicci::Json::Parse("{}");
 		for(DMSNode *cursor=last; cursor; cursor=cursor->prev) {
+			std::string dmName = "";
 			try {
-				fprintf(stdout,"%s|",cursor->dms->getName());
+				dmName.append(cursor->dms->getName());
+				json.AddProperty(dmName, ggicci::Json("OK"));
 				cursor->dms->check();
-				fprintf(stdout,"OK\n");
 				continue;
 			} catch(_com_error ce) {
-				fprintf(stdout,"BAD\nCOM error: %s\n", ce.ErrorMessage());
+				std::string msg = "BAD - COM error: ";
+				msg.append(ce.ErrorMessage());
+				json.AddProperty(dmName, ggicci::Json(msg));
 			} catch(...) {
-				fprintf(stdout,"BAD\nunexpected unknown error!\n");
+				std::string msg = "BAD - unexpected unknown error!";
+				json.AddProperty(dmName, ggicci::Json(msg));
 			}
 			retVal |= cursor->id;
 		}
+		fprintf(stdout, json.ToString().c_str());
 		FGCOMGuard::removeClient();
 		return retVal;
 	}
