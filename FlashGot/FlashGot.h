@@ -577,21 +577,30 @@ public:
 	unsigned int checkAll() {
 		unsigned int retVal=0;
 		FGCOMGuard::addClient();
-		ggicci::Json json = ggicci::Json::Parse("{}");
+		ggicci::Json json = ggicci::Json::Parse("[]");
 		for(DMSNode *cursor=last; cursor; cursor=cursor->prev) {
 			std::string dmName = "";
+			ggicci::Json dm = ggicci::Json::Parse("{}");
 			try {
 				dmName.append(cursor->dms->getName());
-				json.AddProperty(dmName, ggicci::Json("OK"));
 				cursor->dms->check();
+				dm.AddProperty("name", ggicci::Json(dmName));
+				dm.AddProperty("available", ggicci::Json(true));
+				json.Push(dm);
 				continue;
 			} catch(_com_error ce) {
 				std::string msg = "BAD - COM error: ";
 				msg.append(ce.ErrorMessage());
-				json.AddProperty(dmName, ggicci::Json(msg));
+				dm.AddProperty("name", ggicci::Json(dmName));
+				dm.AddProperty("available", ggicci::Json(false));
+				dm.AddProperty("error", ggicci::Json(msg));
+				json.Push(dm);
 			} catch(...) {
 				std::string msg = "BAD - unexpected unknown error!";
-				json.AddProperty(dmName, ggicci::Json(msg));
+				dm.AddProperty("name", ggicci::Json(dmName));
+				dm.AddProperty("available", ggicci::Json(false));
+				dm.AddProperty("error", ggicci::Json(msg));
+				json.Push(dm);
 			}
 			retVal |= cursor->id;
 		}
