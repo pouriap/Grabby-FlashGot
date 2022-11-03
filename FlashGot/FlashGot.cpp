@@ -98,8 +98,8 @@ public:
 	{
 		int lc = downloadInfo->linksCount;
 		std::string referer = utf8::narrow(downloadInfo->referer);
-		std::string refCookies = utf8::narrow(downloadInfo->extras[1]);
-		std::string useragent = utf8::narrow(downloadInfo->extras[4]);
+		std::string refCookies = utf8::narrow(downloadInfo->dlpageCookies);
+		std::string useragent = utf8::narrow(downloadInfo->useragent);
 
 		Json params = Json::Parse("{}");
 
@@ -124,12 +124,11 @@ public:
 			params.AddProperty("postData", Json(""));
 
 			std::string urls = "\\\\F ";
-			LinkInfo *links = downloadInfo->links;
 			for(int i=0; i<lc; i++)
 			{
-				urls.append(utf8::narrow(links[i].url));
+				urls.append(utf8::narrow(downloadInfo->links[i].url));
 				urls.append("|");
-				urls.append(utf8::narrow(links[i].filename));
+				urls.append(utf8::narrow(downloadInfo->links[i].filename));
 				urls.append("\\n");
 			}
 			urls.append("|");
@@ -184,8 +183,8 @@ public:
 		}
 
 		std::string referer = utf8::narrow(downloadInfo->referer);
-		std::string refCookies = utf8::narrow(downloadInfo->extras[1]);
-		std::string useragent = utf8::narrow(downloadInfo->extras[4]);
+		std::string refCookies = utf8::narrow(downloadInfo->dlpageCookies);
+		std::string useragent = utf8::narrow(downloadInfo->useragent);
 
 		Json *dlMessages = new Json[lc];
 
@@ -312,7 +311,7 @@ public:
 				} catch(...)
 				{
 					v[2].bstrVal = SysAllocString(L"FlashGet");
-					v[1].bstrVal = downloadInfo->extras[1]; // document.cookie
+					v[1].bstrVal = downloadInfo->dlpageCookies;
 					try
 					{
 						h.invoke("AddAll", v, 5);
@@ -388,7 +387,7 @@ public:
 		if(lc<1) return;
 
 		std::string referer = utf8::narrow(downloadInfo->referer);
-		std::string useragent = utf8::narrow(downloadInfo->extras[4]);
+		std::string useragent = utf8::narrow(downloadInfo->useragent);
 
 		Json jsonMsg = Json::Parse("{}");
 		jsonMsg.AddProperty("id", Json("4"));
@@ -474,9 +473,8 @@ public:
 
 			FGCOMHelper fdm(progId);
 			fdm.set("Referer",downloadInfo->referer);
-			LinkInfo *links=downloadInfo->links;
 			for(int j=0; j< linksCount; j++) {
-				LinkInfo l=links[j];
+				LinkInfo l = downloadInfo->links[j];
 				fdm.set("Url",l.url);
 				fdm.set("Comment",l.comment);
 				fdm.invoke(methodName);
@@ -674,18 +672,17 @@ public:
 	void dispatch(const DownloadInfo *downloadInfo)
 	{
 		int lc = downloadInfo->linksCount;
-		LinkInfo *links = downloadInfo->links;
 		std::string data = "type:batchDownload||data:[";
 		for(int i=0; i<lc; i++)
 		{
 			//todo: file name when called from browser has additional gibberish characters
 			//this download manager is insane and needs to be fed the name part of the file and extension part of the file separately
-			std::string fullname = utf8::narrow(links[i].filename);
+			std::string fullname = utf8::narrow(downloadInfo->links[i].filename);
 			std::string name = fullname.substr(0, fullname.find_last_of("."));
 			data.append("{\"url\":\"");
-			data.append(utf8::narrow(links[i].url));
+			data.append(utf8::narrow(downloadInfo->links[i].url));
 			data.append("\",\"type\":\"");
-			data.append(utf8::narrow(links[i].extension));
+			data.append(utf8::narrow(downloadInfo->links[i].extension));
 			data.append("\",\"size\":\"\",\"name\":\"");
 			data.append(name);
 			data.append("\"}");
@@ -703,150 +700,6 @@ public:
 		}
 
 		host.close();
-	}
-};
-
-
-class DMSGetRight :
-	public DMSupport
-{
-
-private:
-	static char *findGetRight(HKEY baseKey, char *leafPath, char *exeName) {
-		long res;
-		HKEY hk;
-		char *path=NULL;
-		
-
-		if( (res=RegOpenKeyEx(baseKey,leafPath,0,KEY_QUERY_VALUE,&hk))==ERROR_SUCCESS)
-		{
-		
-		
-			char *installKey="InstallDir";
-			long pathLen=0;	
-			if((res=RegQueryValueEx(hk,installKey,0,NULL,NULL,(LPDWORD)&pathLen))==ERROR_SUCCESS) 
-			{
-				BOOL lastAttempt;
-				do {
-					lastAttempt=exeName==NULL;
-					if(lastAttempt) exeName="getright.exe";
-					size_t fullLen = pathLen + strlen(exeName) + 2;
-					path = new char[fullLen];
-					BOOL fileExists=FALSE;
-					if((res=RegQueryValueEx(hk,installKey,0,NULL,(LPBYTE)path,(LPDWORD)&pathLen))==ERROR_SUCCESS)
-					{
-						struct stat statbuf;
-						if(sprintf_s(path, fullLen, "%s\\%s", path, exeName) > 0)
-							fileExists = !stat(path, &statbuf);  
-					}
-					if(!fileExists) {
-						delete path;
-						path = NULL;
-						if(!lastAttempt) exeName=NULL;
-					}
-				} while(! (path || lastAttempt) );
-			}
-			RegCloseKey(hk);	
-		}
-		
-		return path;
-		
-	}
-	
-	static char *findGetRight(char *exeName) 
-	{
-		char *path;
-		if(	( path=findGetRight(HKEY_CURRENT_USER,"Software\\Headlight\\GetRight\\Config", exeName) )
-			 || ( path=findGetRight(HKEY_LOCAL_MACHINE,"Software\\Headlight\\GetRight",exeName) ) )
-		{
-			return path;
-		}
-		throw "Can't find GetRight executable";
-	}
-
-	static char *createCmdLine(char *path, char *opts, char *arg) {
-		size_t len = strlen(path)+strlen(opts)+strlen(arg)+6;
-		char *cmdLine=new char[len];
-		sprintf_s(cmdLine, len, "\"%s\" %s %s",path,opts,arg);
-		return cmdLine;
-	}
-
-public:
-	
-	const char * getName() { return "GetRight"; }
-
-	void check() 
-	{
-		delete findGetRight(NULL);
-	}
-	void dispatch(const DownloadInfo *downloadInfo) 
-	{
-		char *cmdLine=NULL;
-		char *path=NULL;
-		char *exeName;
-		char *arg;
-		char *tgargs=NULL;
-		if(downloadInfo->linksCount) {
-			exeName="togetright.exe";
-			if( strlen(downloadInfo->extras[2]) 
-				&& (strcmp("old",downloadInfo->extras[2])==0))
-			{
-				arg = downloadInfo->links[0].url; // CHECK ME!!!
-			} else
-			{
-				char *pattern = "/referer=%s /cookie=%s /url=%s";
-				char *cookie = downloadInfo->links[0].cookie;
-				char *referer = downloadInfo->referer;
-				char *url = downloadInfo->links[0].url;
-				
-				size_t tgargsLen = strlen(referer)+
-					strlen(cookie)+
-					strlen(url)+
-					strlen(pattern);
-				arg = tgargs=new char[tgargsLen];
-
-				sprintf_s(tgargs, tgargsLen, pattern,	referer, cookie, url);
-			}
-		} else {
-			exeName=NULL;
-			arg=(char *)downloadInfo->referer;
-		}
-		/*
-		// GetRight doesn't work if not already started... needs more investigation
-
-		if(!FindWindow(NULL, "GetRight "))
-		{
-			path = findGetRight(NULL);
-			if(createProcess(cmdLine = createCmdLine(path, "", ""), NULL))
-			{
-				for(int j = 100; j-- > 0;) // 10 secs for GetRight to show up
-				{
-					if(FindWindow(NULL, "GetRight ")) break;
-					sleep(100);
-					if(j == 50) createProcess(cmdLine, NULL);
-				}
-			}
-			if(cmdLine) delete[] cmdLine;
-		}
-		*/
-		if(exeName || !path) path = findGetRight(exeName);
-		
-		BOOL ret=createProcess(cmdLine=createCmdLine(path = findGetRight(exeName),
-			downloadInfo->extras[0],
-			arg),NULL);
-		if(tgargs) delete [] tgargs;
-		// supplementary post-command
-		if( ret && (!exeName) && strlen(downloadInfo->extras[1])) 
-		{
-			if(cmdLine) delete[] cmdLine;
-			Sleep(500);
-			createProcess(cmdLine = createCmdLine(path,
-				downloadInfo->extras[1],
-				""),NULL);
-		}
-		if(cmdLine) delete [] cmdLine;
-		if(path) delete [] path;
-		if(!ret) throw "Can't launch GetRight";
 	}
 };
 
@@ -931,8 +784,7 @@ public:
 		long lc = downloadInfo->linksCount;
 		if(lc<1) return;
 
-		LinkInfo *links=downloadInfo->links;
-		LinkInfo *l;
+		LinkInfo l;
 
 		ICIDMLinkTransmitter2* pIDM;
 		HRESULT hr = CoCreateInstance(CLSID_CIDMLinkTransmitter, NULL, CLSCTX_LOCAL_SERVER,
@@ -943,9 +795,9 @@ public:
 		{
 			VARIANT reserved;
 			reserved.vt=VT_EMPTY;
-			l = &links[0];
+			l = downloadInfo->links[0];
 			
-			pIDM->SendLinkToIDM2(l->url, downloadInfo->referer, l->cookie, l->postdata,
+			pIDM->SendLinkToIDM2(l.url, downloadInfo->referer, l.cookie, l.postdata,
 					NULL, NULL, NULL, NULL, 0,
 					reserved, reserved);
 		} 
@@ -966,13 +818,13 @@ public:
 				for(long j = 0; j < lc; j++)
 				{
 					index[0] = j;
-					l = &links[j];
+					l = downloadInfo->links[j];
 					
 					index[1] = 0;
 
-					url = (LPCOLESTR)l->url;
-					cookie = (LPCOLESTR)l->cookie;
-					comment = (LPCOLESTR)l->comment;
+					url = (LPCOLESTR)l.url;
+					cookie = (LPCOLESTR)l.cookie;
+					comment = (LPCOLESTR)l.comment;
 
 					SafeArrayPutElement(pSA, index, url);
 			
@@ -1077,9 +929,8 @@ public:
 				h.invoke("AddUrl",v,2);
 			}
 			v[0].bstrVal=downloadInfo->referer;
-			LinkInfo *links=downloadInfo->links;
 			for(int j=0; j<linksCount; j++) {
-				LinkInfo l=links[j];
+				LinkInfo l = downloadInfo->links[j];
 				v[2].bstrVal=l.url;
 				v[1].bstrVal=l.comment;
 				h.invoke(&di_AddUrlWithReferer,v,3);
@@ -1101,76 +952,6 @@ public:
 	const char * getName() { return "NetAnts"; }
 };
 
-
-class DMSNet_Transport :
-	public DMSupportCOM
-{
-
-protected:
-	
-	const char * getProgId() { return "NTIEHelper.NTIEAddUrl"; }
-
-public:
-	const char * getName() { return "Net Transport"; }
-
-	void dispatch(const DownloadInfo *downloadInfo)
-	{
-		CookieManager cm(downloadInfo);
-		
-		int linksCount=downloadInfo->linksCount;
-		bstr_t *parms=downloadInfo->rawParms;
-		
-		SAFEARRAY *psaa[2]=
-		{
-			FGArray::createSafeArray(linksCount),
-			FGArray::createSafeArray(linksCount)
-		};
-
-		VARIANT vstr;
-		vstr.vt = VT_BSTR;
-		long ix[]={0};
-		for(int j=1; ix[0]<linksCount; ix[0]++) 
-		{
-			for(int a=0; a<2; a++) 
-			{
-				vstr.bstrVal=parms[j++];
-				SafeArrayPutElement(psaa[a], ix, &vstr);
-			}
-			j+=4; // skipping cookie & postData & filename & extension;
-		}
-		
-		//AddList(referrer,urls, remarks);
-		VARIANT v[3];
-		v[2].vt=VT_BSTR;
-		v[2].bstrVal=downloadInfo->referer;
-		v[1].vt=v[0].vt=VT_VARIANT | VT_BYREF ;
-		SafeArrayAccessData(psaa[0], (void **)&(v[1].pvarVal));
-		SafeArrayAccessData(psaa[1], (void **)&(v[0].pparray));
-		HELPER(h);
-		h.invoke("AddList",v,3);
-
-		SafeArrayUnlock(psaa[1]);
-		SafeArrayUnlock(psaa[0]);
-		SafeArrayDestroy(psaa[0]);
-		SafeArrayDestroy(psaa[1]);
-	}
-};
-
-
-
-class DMSNet_Transport2 :
-	public DMSNet_Transport
-{
-
-protected:
-	
-	const char * getProgId() { return "NXIEHelper.NXIEAddURL"; }
-
-public:
-	const char * getName() { return "Net Transport 2"; }
-
-};
-
 class DMSWestByte :
 	public DMSupportCOM
 {
@@ -1181,7 +962,6 @@ public:
 	void dispatch(const DownloadInfo *downloadInfo)
 	{
 		int linksCount=downloadInfo->linksCount;
-		bstr_t *parms=downloadInfo->rawParms;
 		
 		if(linksCount>0)
 		{
@@ -1202,9 +982,8 @@ public:
 			{ 
 
 				FGArray fgArray(linksCount * 2);
-				LinkInfo *links=downloadInfo->links;
 				for (int j=0; j < linksCount; j++) {
-					LinkInfo l=links[j];
+					LinkInfo l = downloadInfo->links[j];
 					fgArray.addString(l.url);
 					fgArray.addString(l.comment);
 				}
@@ -1393,8 +1172,8 @@ public:
 		long lc = downloadInfo->linksCount;
 
 		std::string referer = utf8::narrow(downloadInfo->referer);
-		std::string refCookies = utf8::narrow(downloadInfo->extras[1]);
-		std::string useragent = utf8::narrow(downloadInfo->extras[4]);
+		std::string refCookies = utf8::narrow(downloadInfo->dlpageCookies);
+		std::string useragent = utf8::narrow(downloadInfo->useragent);
 
 		Json jsonMsg = Json::Parse("{}");
 
@@ -1482,10 +1261,9 @@ public:
 		CookieManager cm(downloadInfo);
 		HELPER(h);
 
-		LinkInfo *links=downloadInfo->links;
 		int linksCount = downloadInfo->linksCount;
 		if(linksCount == 1){
-			LinkInfo l = links[0];
+			LinkInfo l = downloadInfo->links[0];
 			VARIANT conf;
 			conf.vt = VT_BOOL;
 			conf.boolVal = VARIANT_TRUE;
@@ -1503,11 +1281,11 @@ public:
 			v[4].vt = v[3].vt = v[2].vt = v[1].vt = v[0].vt = VT_BSTR;
 			for (long j=0, len=downloadInfo->linksCount; j<len ; j++) 
 			{ 
-				v[4].bstrVal=links[j].url;
+				v[4].bstrVal=downloadInfo->links[j].url;
 				v[3].bstrVal=downloadInfo->referer;
-				v[2].bstrVal=links[j].cookie;
-				v[1].bstrVal=links[j].comment;
-				v[0].bstrVal=links[j].postdata;
+				v[2].bstrVal=downloadInfo->links[j].cookie;
+				v[1].bstrVal=downloadInfo->links[j].comment;
+				v[0].bstrVal=downloadInfo->links[j].postdata;
 				h.invoke("AddDownloadToList",v,5);
 			}
 
@@ -1560,10 +1338,9 @@ public:
 			}
 		}
 		CookieManager cm(downloadInfo);
-		LinkInfo *links=downloadInfo->links;
 		for(int j=0; j<linksCount; j++) 
 		{	
-			LinkInfo l=links[j];
+			LinkInfo l=downloadInfo->links[j];
 			
 			for(int attempts=120; attempts-->0;) 
 			{ // we give ReGet 2mins to wake up
@@ -1626,9 +1403,8 @@ public:
 		VARIANT v[2];
 		v[0].vt = v[1].vt = VT_BSTR;
 		v[0].bstrVal = downloadInfo->referer; // referrer
-		LinkInfo *links=downloadInfo->links;
 		for (long j=0, len=downloadInfo->linksCount; j < len ; j++) { 
-			v[1].bstrVal=links[j].url;
+			v[1].bstrVal=downloadInfo->links[j].url;
 			downloader.invoke(&di_DownloadURL,v,2);
 		}
 	}
@@ -1655,13 +1431,12 @@ public:
 		v[7].vt = v[6].vt = v[5].vt = v[4].vt = v[3].vt = VT_BSTR;
 		v[2].vt = v[1].vt = v[0].vt = VT_INT;
 
-		LinkInfo *links=downloadInfo->links;
 		for (long j=0, len=downloadInfo->linksCount; j<len ; j++) 
 		{ 
-			v[7].bstrVal=links[j].url;
+			v[7].bstrVal=downloadInfo->links[j].url;
 			v[6].bstrVal=_bstr_t("");
 			v[5].bstrVal=_bstr_t("");
-			v[4].bstrVal=links[j].comment;
+			v[4].bstrVal=downloadInfo->links[j].comment;
 			v[3].bstrVal=downloadInfo->referer;
 			v[2].intVal=-1;
 			v[1].intVal=0;
@@ -1734,11 +1509,10 @@ public:
 		VARIANT v[3];
 		v[0].vt = v[1].vt = v[2].vt = VT_BSTR;
 		v[1].bstrVal = downloadInfo->referer; // referrer
-		LinkInfo *links=downloadInfo->links;
 		for (long j=0, len=downloadInfo->linksCount; j < len ; j++) 
 		{ 
-			v[2].bstrVal=links[j].url;
-			v[0].bstrVal=links[j].cookie;
+			v[2].bstrVal=downloadInfo->links[j].url;
+			v[0].bstrVal=downloadInfo->links[j].cookie;
 			downloader.invoke(&di_MenuURL,v,3);
 		}
 	}
@@ -1765,10 +1539,7 @@ public:
 		HKEY hk = NULL;
 		BOOL ok = false;
 		char app_path[MAX_PATH];
-		if(downloadInfo && strlen((char *)(downloadInfo->extras[2]))) 
-		{ // explicit path
-			strcpy_s(app_path, MAX_PATH, (char *)downloadInfo->extras[2]);
-		} else if(RegOpenKeyEx(HKEY_CURRENT_USER,_T("Software\\WellGet"),0,KEY_QUERY_VALUE,&hk)==ERROR_SUCCESS)
+		if(RegOpenKeyEx(HKEY_CURRENT_USER,_T("Software\\WellGet"),0,KEY_QUERY_VALUE,&hk)==ERROR_SUCCESS)
 		{	
 			DWORD dwDisposition = 1023;
 			BYTE szpath[1024];
@@ -1814,9 +1585,7 @@ public:
 				} 
 			}
 			else 
-			{
-				LinkInfo *links=downloadInfo->links;
-				
+			{				
 				FILE * fp; 
 				char path[MAX_PATH];
 				if (GetTempPath(MAX_PATH, path)==0)
@@ -1832,7 +1601,7 @@ public:
 				fputs(downloadInfo->referer,fp);
 				fputc('\n',fp);
 				for(int j=0,count=downloadInfo->linksCount; j<count; j++) {
-					LinkInfo l=links[j];
+					LinkInfo l = downloadInfo->links[j];
 					fputs(l.url,fp);
 					fputc('\n',fp);
 					fputs(l.comment,fp);
@@ -1870,7 +1639,7 @@ void DMSFactory::registerAll()
 	add(new DMSFreeDownloadManager3());
 	add(new DMSFreshDownload());
 	add(new DMSGetGo());
-	add(new DMSGetRight());
+	//add(new DMSGetRight());
 	add(new DMSGigaGet());
 	//add(new DMSHiDownload());
 	add(new DMSInstantGet());
@@ -1880,8 +1649,8 @@ void DMSFactory::registerAll()
 	add(new DMSLeechGet());
 	add(new DMSMass_Downloader());
 	add(new DMSNetAnts());
-	add(new DMSNet_Transport());
-	add(new DMSNet_Transport2());
+	//add(new DMSNet_Transport());
+	//add(new DMSNet_Transport2());
 	//add(new DMSOrbit());
 	add(new DMSReGet());
 	add(new DMSReGet_Legacy());
@@ -1895,7 +1664,7 @@ void DMSFactory::registerAll()
 
 
 
-DMSupport* createDMS(char *name) {
+DMSupport* createDMS(const char *name) {
 	DMSupport *res=DMSFactory::getInstance()->getDMS(name);
 	if(res) return res;
 	sprintf_s(g_buf, BUF_SIZE, "Unsupported Download Manager %s", name);
@@ -1912,110 +1681,55 @@ wchar_t *UTF8toUnicode(const char *src) {
 		;
 }
 
-bstr_t * readLine(std::istringstream &s, bstr_t *buffer) 
-{
-	bool isLine=false;
-	while(!s.eof())
-	{
-		s.getline(g_buf, BUF_SIZE);
-		size_t lastPos=strlen(g_buf)-1;
-		while(lastPos>=0 && 
-			(g_buf[lastPos]==0x0a || g_buf[lastPos]==0x0d)
-			)
-		{
-			g_buf[lastPos--]='\0';
-			isLine=true;
-		}
-		
-		buffer->Assign(*buffer + UTF8toUnicode((const char*) g_buf));
-		if(isLine) break;
-	}
-	return buffer;
-}
-
 void performTest()
 {
 	DMSFactory::getInstance()->checkAll();
 }
 
-
-void parseHeader(DownloadInfo *downloadInfo, char *header_buf)
+void performJob(const Json &job)
 {
-#define HEADER_COUNT 4
-	char *header[HEADER_COUNT];
-	char *cur=header_buf;
-	for(int j=0; j<HEADER_COUNT ; ) 
-	{
-		if( (header[j++]=cur)  && (cur=strchr(cur,';')) ) 
-		{
-			cur[0]='\0';
-			++cur;
-		} 
-		else
-		{
-			if(j!=HEADER_COUNT) fail("Malformed header", ERR_MARFORMED_HEADER);	
-			break;
-		}
-	}
-
-	downloadInfo->linksCount=atoi(header[0]);
-	downloadInfo->dmName=header[1];
-	int typeId=atoi(header[2]);
-	downloadInfo->opType = (typeId<OP_MIN||typeId>OP_MAX)
-		?OP_ALL:(OpType)typeId;
-	downloadInfo->folder = bstr_t(UTF8toUnicode((const char *)header[3]));
-}
-
-void performJob(const string &jobStr)
-{
-	std::istringstream s(jobStr);
-
 	DMSupport *dms = NULL;
 	const char *errMsg="Download manager not properly installed.\n%s";
-	BOOL completed=FALSE;
+	BOOL completed = FALSE;
+
 	try 
 	{
 		DownloadInfo downloadInfo;
 
-		char header_buf[BUF_SIZE];
-		if(!s.eof())
+		downloadInfo.linksCount = job["dlcount"].AsInt();
+		downloadInfo.dmName = job["dmname"].AsString();
+		int typeId = job["optype"].AsInt();
+		downloadInfo.opType = (typeId<OP_MIN||typeId>OP_MAX)? OP_ALL : (OpType) typeId;
+		downloadInfo.referer = utf8::widen(job["dlpage_url"].AsString()).c_str();
+		downloadInfo.dlpageReferer = utf8::widen(job["dlpage_referer"].AsString()).c_str();
+		downloadInfo.dlpageCookies = utf8::widen(job["dlpage_cookies"].AsString()).c_str();
+		downloadInfo.useragent = utf8::widen(job["useragent"].AsString()).c_str();
+			
+		for(int i=0; i<downloadInfo.linksCount; i++)
 		{
-			s.getline(header_buf, BUF_SIZE);
-			parseHeader(&downloadInfo, header_buf);
-			int linksCount=downloadInfo.linksCount;
-			int parmsCount = 1 + linksCount * 6 + EXTRAS_COUNT; // referer + (url + info + cookie + postdata + filename + ext) * 6 + referer cookie + referer referer + useragent :-)
-
-			bstr_t *parms=downloadInfo.rawParms=new bstr_t[parmsCount];
-			
-			LinkInfo *links=downloadInfo.links=new LinkInfo[linksCount];
-			
-			for(int j=0; j<parmsCount; j++) {
-				parms[j]="";
-				bstr_t *buffer = &parms[j];
-				readLine(s, buffer);
-			}
-			
-			downloadInfo.referer = parms[0];
-			downloadInfo.links = (LinkInfo *) &parms[1];
-			downloadInfo.extras = &parms[parmsCount - EXTRAS_COUNT];
-
-			(dms=createDMS(downloadInfo.dmName))->dispatch(&downloadInfo);
-			//TODO: what did this do?
-			//it caused gibberish output so I commented it out 
-			//printf("%s",downloadInfo.folder);
+			LinkInfo info;
+			info.url = utf8::widen(job["downloads"][i]["url"].AsString()).c_str();
+			info.comment = utf8::widen(job["downloads"][i]["desc"].AsString()).c_str();
+			info.cookie = utf8::widen(job["downloads"][i]["cookies"].AsString()).c_str();
+			info.postdata = utf8::widen(job["downloads"][i]["postdata"].AsString()).c_str();
+			info.filename = utf8::widen(job["downloads"][i]["filename"].AsString()).c_str();
+			info.extension = utf8::widen(job["downloads"][i]["extension"].AsString()).c_str();
+			downloadInfo.links.push_back(info);
 		}
+
+		(dms=createDMS(downloadInfo.dmName.c_str()))->dispatch(&downloadInfo);
 		completed=TRUE;
 	} 
 	catch(_com_error ce)
 	{
-		sprintf_s(g_buf, BUF_SIZE, errMsg,ce.ErrorMessage());
+		sprintf_s(g_buf, BUF_SIZE, errMsg, ce.ErrorMessage());
 	}
 	catch(char *ex) {
 		sprintf_s(g_buf, BUF_SIZE, errMsg, ex);
 	} 
-	//catch(...) {
-	//	sprintf(g_buf,errMsg,"");
-	//}
+	catch(...) {
+		sprintf_s(g_buf, BUF_SIZE, errMsg, "");
+	}
 	
 	if(dms) delete dms;
 	
@@ -2035,8 +1749,9 @@ int main(int argc, char* argv[])
 	{
 		try
 		{
-			string jobStr = from_base64(argv[1]);
-			performJob(jobStr);
+			string jsonStr = from_base64(argv[1]);
+			Json job = Json::Parse(jsonStr.c_str());
+			performJob(job);
 		}
 		catch(...)
 		{

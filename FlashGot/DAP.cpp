@@ -29,7 +29,7 @@ void DMSDownloadAcceleratorPlus::dispatch(const DownloadInfo *downloadInfo)
 		case OP_SEL: case OP_ALL:
 		{
 			IWebBrowser2Ptr ie(__uuidof(InternetExplorer));	
-			InternetSetCookie(downloadInfo->referer,NULL,downloadInfo->extras[0]);
+			InternetSetCookie(downloadInfo->referer,NULL,downloadInfo->dlpageCookies);
 			
 			
 			ie->PutSilent(VARIANT_TRUE);
@@ -38,7 +38,7 @@ void DMSDownloadAcceleratorPlus::dispatch(const DownloadInfo *downloadInfo)
 			VARIANT v1,v2;
 			v1.vt=v2.vt=VT_BSTR;
 			v1.bstrVal=downloadInfo->referer;
-			v2.bstrVal="Referer: "+downloadInfo->extras[1];
+			v2.bstrVal="Referer: "+downloadInfo->dlpageReferer;
 			
 			
 			ie->Navigate2(&v1,&vtMissing,&vtMissing,&vtMissing,&v2);
@@ -66,9 +66,8 @@ void DMSDownloadAcceleratorPlus::dispatch(const DownloadInfo *downloadInfo)
 			if(doc) {
 				
 				bstr_t html;
-				LinkInfo *links=downloadInfo->links;
 				for(int j=0, linksCount=downloadInfo->linksCount; j<linksCount; j++) { // skipping postdata
-					LinkInfo l=links[j];
+					LinkInfo l = downloadInfo->links[j];
 					html+="<a href=\""+l.url+"\">"
 						+l.comment+"</a>";
 				}

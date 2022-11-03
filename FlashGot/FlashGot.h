@@ -30,8 +30,6 @@ extern CComModule _Module;
 #define ERR_UNSUPPORTED_DM -8000
 #define ERR_GENERAL 1
 
-#define VERSION "0.11.0b"
-
 #define DMS_POLL_DELAY 100
 #define DMS_POLL_TIMEOUT 60000
 enum OpType { 
@@ -53,14 +51,14 @@ typedef struct _LinkInfo
 
 typedef struct _DownloadInfo 
 {
-	char *dmName;
+	std::string dmName;
 	OpType opType;
-	bstr_t folder;
-    bstr_t *rawParms;
 	bstr_t referer;
-	LinkInfo *links;
+	std::vector<LinkInfo> links;
 	int linksCount;
-	bstr_t *extras;
+	bstr_t dlpageCookies;
+	bstr_t dlpageReferer;
+	bstr_t useragent;
 } DownloadInfo;
 
 void fail(char *msg, int code);
@@ -75,7 +73,9 @@ class CookieManager
 		
 		CookieManager(const DownloadInfo *downloadInfo) : downloadInfo(downloadInfo)
 		{
-			int hoursToLive = atoi(downloadInfo->extras[4]);
+			//todo: this used to be extras[4]
+			//since grabby doesn't specify cookie lifetime currently i changed this to one year
+			int hoursToLive = 24*365;
 			setAll(downloadInfo, 3600 * (hoursToLive == 0 ? 1 : hoursToLive));
 		}
 
@@ -116,10 +116,9 @@ class CookieManager
 		{
 			char expiration[64];
 			makeExpiration(expiration,64,offsetExpiration);
-			LinkInfo *links=downloadInfo->links;
 			for(int j=downloadInfo->linksCount; j-->0;)
 			{
-				LinkInfo l=links[j];
+				LinkInfo l = downloadInfo->links[j];
 				setCookie(&l.url,&l.cookie,expiration);
 			}
 		}
@@ -169,10 +168,9 @@ class FGArray
 		}
 		
 		void addLinks(const DownloadInfo *downloadInfo) {
-			LinkInfo *links=downloadInfo->links;
 			for (int j=0, linksCount=downloadInfo->linksCount; j < linksCount ; j++) 
 			{
-				LinkInfo l=links[j];
+				LinkInfo l = downloadInfo->links[j];
 				addString(l.url);
 				addString(l.comment);
 			}
@@ -573,9 +571,9 @@ public:
 	}
 	
 	
-	DMSupport *getDMS(char *name) {
+	DMSupport *getDMS(const char *name) {
 		DMSNode *cursor=last;
-		for(; cursor && strcmp(cursor->dms->getName(),name); cursor=cursor->prev);
+		for(; cursor && strcmp(cursor->dms->getName(), name); cursor=cursor->prev);
 		return cursor 
 			?cursor->dms
 			:NULL;	
