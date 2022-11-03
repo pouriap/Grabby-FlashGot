@@ -8,20 +8,20 @@ using namespace MSHTML;
 
 
 
-void DMSDownloadAcceleratorPlus::dispatch(const DownloadInfo *downloadInfo)
+void DMSDownloadAcceleratorPlus::dispatch(const JobInfo *jobInfo)
 {
 	HELPER(helper);
-	switch(downloadInfo->opType) 
+	switch(jobInfo->optype) 
 	{
 		case OP_ONE:
 		{
 			VARIANT v[4];
-			LinkInfo l=downloadInfo->links[0];
+			LinkInfo l=jobInfo->links[0];
 			v[0].vt=v[1].vt=v[2].vt=v[3].vt=v[3].vt=VT_BSTR;
 			v[3].bstrVal= l.url; // URL
-			v[2].bstrVal= downloadInfo->referer ; // Referer
-			v[1].bstrVal= l.cookie ; // cookie
-			v[0].bstrVal= l.comment ; // info
+			v[2].bstrVal= jobInfo->referer ; // Referer
+			v[1].bstrVal= l.cookies ; // cookie
+			v[0].bstrVal= l.desc ; // info
 			helper.invoke("MenuUrl2",v,4);
 			break;
 		}
@@ -29,7 +29,7 @@ void DMSDownloadAcceleratorPlus::dispatch(const DownloadInfo *downloadInfo)
 		case OP_SEL: case OP_ALL:
 		{
 			IWebBrowser2Ptr ie(__uuidof(InternetExplorer));	
-			InternetSetCookie(downloadInfo->referer,NULL,downloadInfo->dlpageCookies);
+			InternetSetCookie(jobInfo->referer,NULL,jobInfo->dlpageCookies);
 			
 			
 			ie->PutSilent(VARIANT_TRUE);
@@ -37,8 +37,8 @@ void DMSDownloadAcceleratorPlus::dispatch(const DownloadInfo *downloadInfo)
 			
 			VARIANT v1,v2;
 			v1.vt=v2.vt=VT_BSTR;
-			v1.bstrVal=downloadInfo->referer;
-			v2.bstrVal="Referer: "+downloadInfo->dlpageReferer;
+			v1.bstrVal=jobInfo->referer;
+			v2.bstrVal="Referer: "+jobInfo->dlpageReferer;
 			
 			
 			ie->Navigate2(&v1,&vtMissing,&vtMissing,&vtMissing,&v2);
@@ -66,10 +66,10 @@ void DMSDownloadAcceleratorPlus::dispatch(const DownloadInfo *downloadInfo)
 			if(doc) {
 				
 				bstr_t html;
-				for(int j=0, linksCount=downloadInfo->linksCount; j<linksCount; j++) { // skipping postdata
-					LinkInfo l = downloadInfo->links[j];
+				for(int j=0, linksCount=jobInfo->dlcount; j<linksCount; j++) { // skipping postdata
+					LinkInfo l = jobInfo->links[j];
 					html+="<a href=\""+l.url+"\">"
-						+l.comment+"</a>";
+						+l.desc+"</a>";
 				}
 				IHTMLElementPtr body = doc->Getbody();
 				if(body)

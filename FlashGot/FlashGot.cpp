@@ -53,25 +53,25 @@ class DMSAddUrlFamily :
 	public DMSupportCOM
 {
 protected:
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
-		CookieManager cm(downloadInfo);
+		CookieManager cm(jobInfo);
 		HELPER(h);
-		int linksCount=downloadInfo->linksCount;
+		int linksCount=jobInfo->dlcount;
 		if(linksCount>0)
 		{
 			if(linksCount<2) {
-				LinkInfo link=downloadInfo->links[0];
+				LinkInfo link=jobInfo->links[0];
 				VARIANT v[3];
 				v[2].vt=v[1].vt=v[0].vt=VT_BSTR;
 				v[2].bstrVal=link.url;
-				v[1].bstrVal=link.comment;
-				v[0].bstrVal=downloadInfo->referer;
+				v[1].bstrVal=link.desc;
+				v[0].bstrVal=jobInfo->referer;
 				h.invoke("AddUrl", v, 3);
 			} 
 			else 
 			{
-				FGArray fgArray(downloadInfo);
+				FGArray fgArray(jobInfo);
 				h.invoke("AddUrlList", fgArray.asVariant(), 1);
 			}
 		}
@@ -94,12 +94,12 @@ public:
 		return "EagleGet"; 
 	}
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
-		int lc = downloadInfo->linksCount;
-		std::string referer = utf8::narrow(downloadInfo->referer);
-		std::string refCookies = utf8::narrow(downloadInfo->dlpageCookies);
-		std::string useragent = utf8::narrow(downloadInfo->useragent);
+		int lc = jobInfo->dlcount;
+		std::string referer = utf8::narrow(jobInfo->referer);
+		std::string refCookies = utf8::narrow(jobInfo->dlpageCookies);
+		std::string useragent = utf8::narrow(jobInfo->useragent);
 
 		Json params = Json::Parse("{}");
 
@@ -111,8 +111,8 @@ public:
 
 		if(lc == 1)
 		{
-			LinkInfo link = downloadInfo->links[0];
-			params.AddProperty("cookie", Json(utf8::narrow(link.cookie)));
+			LinkInfo link = jobInfo->links[0];
+			params.AddProperty("cookie", Json(utf8::narrow(link.cookies)));
 			params.AddProperty("fileName", Json(utf8::narrow(link.filename)));
 			params.AddProperty("postData", Json(utf8::narrow(link.postdata)));
 			params.AddProperty("url", Json(utf8::narrow(link.url)));
@@ -126,9 +126,9 @@ public:
 			std::string urls = "\\\\F ";
 			for(int i=0; i<lc; i++)
 			{
-				urls.append(utf8::narrow(downloadInfo->links[i].url));
+				urls.append(utf8::narrow(jobInfo->links[i].url));
 				urls.append("|");
-				urls.append(utf8::narrow(downloadInfo->links[i].filename));
+				urls.append(utf8::narrow(jobInfo->links[i].filename));
 				urls.append("\\n");
 			}
 			urls.append("|");
@@ -171,10 +171,10 @@ public:
 		return "FlareGet"; 
 	}
 
-	void dispatch(const DownloadInfo *downloadInfo){
+	void dispatch(const JobInfo *jobInfo){
 
 
-		long lc = downloadInfo->linksCount;
+		long lc = jobInfo->dlcount;
 
 		//doesn't not support more than one link
 		if(lc>1)
@@ -182,21 +182,21 @@ public:
 			return; 
 		}
 
-		std::string referer = utf8::narrow(downloadInfo->referer);
-		std::string refCookies = utf8::narrow(downloadInfo->dlpageCookies);
-		std::string useragent = utf8::narrow(downloadInfo->useragent);
+		std::string referer = utf8::narrow(jobInfo->referer);
+		std::string refCookies = utf8::narrow(jobInfo->dlpageCookies);
+		std::string useragent = utf8::narrow(jobInfo->useragent);
 
 		Json *dlMessages = new Json[lc];
 
 		for(int i=0; i<lc; i++){
 			Json jsonMsg = Json::Parse("{}");
-			jsonMsg.AddProperty("url", Json(utf8::narrow(downloadInfo->links[i].url)));
-			jsonMsg.AddProperty("cookies", Json(utf8::narrow(downloadInfo->links[i].cookie)));
+			jsonMsg.AddProperty("url", Json(utf8::narrow(jobInfo->links[i].url)));
+			jsonMsg.AddProperty("cookies", Json(utf8::narrow(jobInfo->links[i].cookies)));
 			jsonMsg.AddProperty("useragent", Json(useragent));
-			jsonMsg.AddProperty("filename", Json(utf8::narrow(downloadInfo->links[i].filename)));
+			jsonMsg.AddProperty("filename", Json(utf8::narrow(jobInfo->links[i].filename)));
 			jsonMsg.AddProperty("filesize", Json(""));
 			jsonMsg.AddProperty("referrer", Json(referer));
-			jsonMsg.AddProperty("postdata", Json(utf8::narrow(downloadInfo->links[i].postdata)));
+			jsonMsg.AddProperty("postdata", Json(utf8::narrow(jobInfo->links[i].postdata)));
 			jsonMsg.AddProperty("vid", Json(""));
 			jsonMsg.AddProperty("status", Json("OK"));
 			dlMessages[i] = jsonMsg;
@@ -245,25 +245,25 @@ public:
 	
 	const char * getName() { return "FlashGet 2.x"; }
 	
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
-		CookieManager cm(downloadInfo);
+		CookieManager cm(jobInfo);
 		HELPER(h);
-		int linksCount=downloadInfo->linksCount;
+		int linksCount=jobInfo->dlcount;
 		if( linksCount >0 ) try
 		{
 			
 			if(linksCount<2) {
-				LinkInfo link = downloadInfo->links[0];
+				LinkInfo link = jobInfo->links[0];
 				VARIANT v[7];
 				try
 				{
 					v[6].vt = v[5].vt = v[4].vt = v[3].vt = v[2].vt = v[1].vt = v[0].vt = VT_BSTR;
 					v[6].bstrVal = link.url;
-					v[5].bstrVal = link.comment.length() > 0 ? link.url : link.comment;
-					v[4].bstrVal = downloadInfo->referer;
+					v[5].bstrVal = link.desc.length() > 0 ? link.url : link.desc;
+					v[4].bstrVal = jobInfo->referer;
 					v[3].bstrVal = SysAllocString(L"FlashGet3");
-					v[2].bstrVal = link.cookie;
+					v[2].bstrVal = link.cookies;
 					v[1].bstrVal = SysAllocString(L"0");
 					v[0].bstrVal = SysAllocString(L"3");
 					try 
@@ -286,8 +286,8 @@ public:
 						VARIANT v[5];
 						v[4].vt = v[3].vt = v[2].vt = v[1].vt = v[0].vt = VT_BSTR;
 						v[4].bstrVal = link.url;
-						v[3].bstrVal = link.comment.length() > 0 ? link.url : link.comment;
-						v[2].bstrVal = downloadInfo->referer;
+						v[3].bstrVal = link.desc.length() > 0 ? link.url : link.desc;
+						v[2].bstrVal = jobInfo->referer;
 						v[1].bstrVal = SysAllocString(L"FlashGet");
 						v[0].bstrVal =  SysAllocString(L"0");
 						h.invoke("AddUrlEx", v, 5);
@@ -296,13 +296,13 @@ public:
 			} 
 			else 
 			{
-				FGArray fgArray(downloadInfo);
+				FGArray fgArray(jobInfo);
 				VARIANT v[5];
 				try
 				{
 					fgArray.asVariant(&v[4]);
 					v[3].vt = v[2].vt = v[1].vt = v[0].vt = VT_BSTR;
-					v[3].bstrVal = downloadInfo->referer;
+					v[3].bstrVal = jobInfo->referer;
 					v[2].bstrVal = SysAllocString(L"FlashGet3");
 					v[1].bstrVal = SysAllocString(L"");
 					v[0].bstrVal = SysAllocString(L"0");
@@ -311,7 +311,7 @@ public:
 				} catch(...)
 				{
 					v[2].bstrVal = SysAllocString(L"FlashGet");
-					v[1].bstrVal = downloadInfo->dlpageCookies;
+					v[1].bstrVal = jobInfo->dlpageCookies;
 					try
 					{
 						h.invoke("AddAll", v, 5);
@@ -321,7 +321,7 @@ public:
 						
 						fgArray.asVariant(&v[3]);
 						v[2].vt = v[1].vt = v[0].vt = VT_BSTR;
-						v[2].bstrVal = downloadInfo->referer;
+						v[2].bstrVal = jobInfo->referer;
 						v[1].bstrVal = SysAllocString(L"FlashGet");
 						v[0].bstrVal = SysAllocString(L"0");
 						
@@ -331,9 +331,9 @@ public:
 			}
 		} catch(...)
 		{
-			LinkInfo link = downloadInfo->links[0];
+			LinkInfo link = jobInfo->links[0];
 			char buf[4096];
-			sprintf_s(buf, 4096, "%s\n%s\n%s", (char *)link.url, (char *)link.comment, (char *)downloadInfo->referer);
+			sprintf_s(buf, 4096, "%s\n%s\n%s", (char *)link.url, (char *)link.desc, (char *)jobInfo->referer);
 			fail(buf, ERR_GENERAL);
 		}
 	}
@@ -351,15 +351,15 @@ public:
 	
 	const char * getName() { return "FlashGet 2"; }
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
 		try
 		{
-		  DMSAddUrlFamily::dispatch(downloadInfo);
+		  DMSAddUrlFamily::dispatch(jobInfo);
 		} catch(...)
 		{
 			DMSFlashGet2X dms;
-			dms.dispatch(downloadInfo);
+			dms.dispatch(jobInfo);
 		}
 	}
 };
@@ -381,13 +381,13 @@ public:
 		return "Free Download Manager"; 
 	}
 
-	void dispatch(const DownloadInfo *downloadInfo){
+	void dispatch(const JobInfo *jobInfo){
 
-		long lc = downloadInfo->linksCount;
+		long lc = jobInfo->dlcount;
 		if(lc<1) return;
 
-		std::string referer = utf8::narrow(downloadInfo->referer);
-		std::string useragent = utf8::narrow(downloadInfo->useragent);
+		std::string referer = utf8::narrow(jobInfo->referer);
+		std::string useragent = utf8::narrow(jobInfo->useragent);
 
 		Json jsonMsg = Json::Parse("{}");
 		jsonMsg.AddProperty("id", Json("4"));
@@ -396,8 +396,8 @@ public:
 		Json downloads = Json::Parse("[]");
 		for(int i=0; i<lc; i++){
 			//todo: add post data
-			std::string cookie = utf8::narrow(downloadInfo->links[i].cookie);
-			std::string url = utf8::narrow(downloadInfo->links[i].url);
+			std::string cookie = utf8::narrow(jobInfo->links[i].cookies);
+			std::string url = utf8::narrow(jobInfo->links[i].url);
 			Json dl = Json::Parse("{}");
 			dl.AddProperty("url", Json(url));
 			dl.AddProperty("originalUrl", Json(url));
@@ -452,13 +452,13 @@ public:
 	
 	const char * getName() { return "Free Download Manager 3"; }
 
-	void dispatch(const DownloadInfo *downloadInfo )
+	void dispatch(const JobInfo *jobInfo )
 	{
 		
-		int linksCount=downloadInfo->linksCount;
+		int linksCount=jobInfo->dlcount;
 		if(linksCount>0)
 		{
-			CookieManager cm(downloadInfo);
+			CookieManager cm(jobInfo);
 			const char *progId;
 			char *methodName;
 
@@ -472,11 +472,11 @@ public:
 			}
 
 			FGCOMHelper fdm(progId);
-			fdm.set("Referer",downloadInfo->referer);
+			fdm.set("Referer",jobInfo->referer);
 			for(int j=0; j< linksCount; j++) {
-				LinkInfo l = downloadInfo->links[j];
+				LinkInfo l = jobInfo->links[j];
 				fdm.set("Url",l.url);
-				fdm.set("Comment",l.comment);
+				fdm.set("Comment",l.desc);
 				fdm.invoke(methodName);
 			}
 			if(linksCount>1) fdm.invoke("ShowAddUrlListDialog");
@@ -496,11 +496,11 @@ class DMSBitComet :
 	public:
 		const char * getName() { return "BitComet"; }
 
-		void dispatch(const DownloadInfo *downloadInfo)
+		void dispatch(const JobInfo *jobInfo)
 		{
 			HELPER(h);
 
-			int linksCount = downloadInfo->linksCount;
+			int linksCount = jobInfo->dlcount;
 			if (linksCount > 0)
 			{
 				if (linksCount < 2)
@@ -512,15 +512,15 @@ class DMSBitComet :
 					
 					// write ref URL to param array
 					v[1].vt = VT_BSTR;
-					v[1].bstrVal = downloadInfo->referer;
+					v[1].bstrVal = jobInfo->referer;
 
 					// write URL title to param array
 					v[2].vt = VT_BSTR;
-					v[2].bstrVal = downloadInfo->links[0].comment;
+					v[2].bstrVal = jobInfo->links[0].desc;
 
 					// write target URL to param array
 					v[3].vt = VT_BSTR;
-					v[3].bstrVal = downloadInfo->links[0].url;
+					v[3].bstrVal = jobInfo->links[0].url;
 
 					// write html content to param array
 					v[4].vt = VT_NULL;
@@ -567,7 +567,7 @@ class DMSBitComet :
 
 					for (int i=0; i < linksCount; i++)
 					{
-						varStr.bstrVal = downloadInfo->links[i].url;
+						varStr.bstrVal = jobInfo->links[i].url;
 						hResult = SafeArrayPutElement(pSA_URL, index, &varStr);
 						if (hResult != S_OK)
 						{
@@ -575,7 +575,7 @@ class DMSBitComet :
 						}
 						index[0]++;
 
-						varStr.bstrVal = downloadInfo->links[i].comment;
+						varStr.bstrVal = jobInfo->links[i].desc;
 						hResult = SafeArrayPutElement(pSA_URL, index, &varStr);
 						if (hResult != S_OK)
 						{
@@ -595,7 +595,7 @@ class DMSBitComet :
 					// write refer url to param array
 					BSTR refer_url = SysAllocString(L"unknown");
 					v[3].vt = VT_BSTR;
-					v[3].bstrVal = refer_url;//downloadInfo->referer;
+					v[3].bstrVal = refer_url;//jobInfo->referer;
 
 					// write html content to param array
 					BSTR html_content = SysAllocString(L"unkown");
@@ -631,24 +631,24 @@ public:
 	
 	const char * getName() { return "FreshDownload"; }
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
 		HELPER(h);
-		CookieManager cm(downloadInfo);
-		if(downloadInfo->opType==OP_ONE) 
+		CookieManager cm(jobInfo);
+		if(jobInfo->optype==OP_ONE) 
 		{
-			LinkInfo l=downloadInfo->links[0];
+			LinkInfo l=jobInfo->links[0];
 			VARIANT v[3];
 			v[2].vt=v[1].vt=VT_BSTR;
 			v[2].bstrVal=l.url; // URL
-			v[1].bstrVal=downloadInfo->referer; // referer
+			v[1].bstrVal=jobInfo->referer; // referer
 			v[0].vt=VT_INT;
 			v[0].intVal=0; // quiet (0 means "show dialog")
 			h.invoke("AddURL",v,3);
 		} 
 		else
 		{
-			h.invoke("AddUrlList",FGArray(downloadInfo).asVariant(),1);
+			h.invoke("AddUrlList",FGArray(jobInfo).asVariant(),1);
 		}
 	}
 };
@@ -669,20 +669,20 @@ public:
 		return "GetGo"; 
 	}
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
-		int lc = downloadInfo->linksCount;
+		int lc = jobInfo->dlcount;
 		std::string data = "type:batchDownload||data:[";
 		for(int i=0; i<lc; i++)
 		{
 			//todo: file name when called from browser has additional gibberish characters
 			//this download manager is insane and needs to be fed the name part of the file and extension part of the file separately
-			std::string fullname = utf8::narrow(downloadInfo->links[i].filename);
+			std::string fullname = utf8::narrow(jobInfo->links[i].filename);
 			std::string name = fullname.substr(0, fullname.find_last_of("."));
 			data.append("{\"url\":\"");
-			data.append(utf8::narrow(downloadInfo->links[i].url));
+			data.append(utf8::narrow(jobInfo->links[i].url));
 			data.append("\",\"type\":\"");
-			data.append(utf8::narrow(downloadInfo->links[i].extension));
+			data.append(utf8::narrow(jobInfo->links[i].extension));
 			data.append("\",\"size\":\"\",\"name\":\"");
 			data.append(name);
 			data.append("\"}");
@@ -717,25 +717,25 @@ public:
 	const char * getName() { return "HiDownload"; }
 
 	
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
-		CookieManager cm(downloadInfo);
+		CookieManager cm(jobInfo);
 		
 		
 		HELPER(h);
 		
 		
-		if(downloadInfo->linksCount == 1 && !FindWindow("HiDownload", NULL))
+		if(jobInfo->dlcount == 1 && !FindWindow("HiDownload", NULL))
 		{
 			VARIANT v[2];
 			v[1].vt = v[0].vt = VT_BSTR;
-			LinkInfo l = downloadInfo->links[0];
+			LinkInfo l = jobInfo->links[0];
 			v[1].bstrVal = l.url;
-			v[0].bstrVal = l.comment;
+			v[0].bstrVal = l.desc;
 			h.invoke("NMAddUrl", v, 2);
 		} else
 		{
-			FGArray fgArray(downloadInfo);
+			FGArray fgArray(jobInfo);
 			VARIANT v;
 			v.vt = VT_BYREF | VT_VARIANT;
 			v.pvarVal = fgArray.asVariant();
@@ -779,9 +779,9 @@ public:
 		if(!path) throw "Can't find Internet Download Manager executable";
 	}
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
-		long lc = downloadInfo->linksCount;
+		long lc = jobInfo->dlcount;
 		if(lc<1) return;
 
 		LinkInfo l;
@@ -795,9 +795,9 @@ public:
 		{
 			VARIANT reserved;
 			reserved.vt=VT_EMPTY;
-			l = downloadInfo->links[0];
+			l = jobInfo->links[0];
 			
-			pIDM->SendLinkToIDM2(l.url, downloadInfo->referer, l.cookie, l.postdata,
+			pIDM->SendLinkToIDM2(l.url, jobInfo->referer, l.cookies, l.postdata,
 					NULL, NULL, NULL, NULL, 0,
 					reserved, reserved);
 		} 
@@ -818,13 +818,13 @@ public:
 				for(long j = 0; j < lc; j++)
 				{
 					index[0] = j;
-					l = downloadInfo->links[j];
+					l = jobInfo->links[j];
 					
 					index[1] = 0;
 
 					url = (LPCOLESTR)l.url;
-					cookie = (LPCOLESTR)l.cookie;
-					comment = (LPCOLESTR)l.comment;
+					cookie = (LPCOLESTR)l.cookies;
+					comment = (LPCOLESTR)l.desc;
 
 					SafeArrayPutElement(pSA, index, url);
 			
@@ -841,7 +841,7 @@ public:
 			    VariantInit(&array);
 				array.vt = VT_ARRAY | VT_BSTR;
 			    array.parray = pSA;
-				pIDM->SendLinksArray(downloadInfo->referer, &array);
+				pIDM->SendLinksArray(jobInfo->referer, &array);
 				SafeArrayDestroy(pSA);
 			}
 		}
@@ -857,17 +857,17 @@ class DMSLeechGetBase :
 public:
 	
 	
-	void dispatch(const DownloadInfo *downloadInfo) 
+	void dispatch(const JobInfo *jobInfo) 
 	{	
 		HELPER(h);
-		CookieManager cm(downloadInfo);
-		if(downloadInfo->linksCount>0) 
+		CookieManager cm(jobInfo);
+		if(jobInfo->dlcount>0) 
 		{
-			h.invoke(downloadInfo->opType==OP_ONE?"AddURL":"Wizard", downloadInfo->links[0].url);
+			h.invoke(jobInfo->optype==OP_ONE?"AddURL":"Wizard", jobInfo->links[0].url);
 		} 
 		else 
 		{
-			h.invoke("Parse",downloadInfo->referer);
+			h.invoke("Parse",jobInfo->referer);
 		}
 	}
 };
@@ -910,17 +910,17 @@ public:
 	
 	const char * getName() { return "Mass Downloader"; }
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
 		
 		
-		int linksCount=downloadInfo->linksCount;
+		int linksCount=jobInfo->dlcount;
 		if(linksCount<1) return;
 		{
 			VARIANT v[3];
 			v[2].vt=v[1].vt=v[0].vt=VT_BSTR;
 			HELPER(h);
-			CookieManager cg(downloadInfo);
+			CookieManager cg(jobInfo);
 			DISPID di_AddUrlWithReferer;
 			h.getMemberID("AddUrlWithReferer",&di_AddUrlWithReferer);
 			
@@ -928,11 +928,11 @@ public:
 				v[1].bstrVal=v[0].bstrVal=bstr_t("Begin.");
 				h.invoke("AddUrl",v,2);
 			}
-			v[0].bstrVal=downloadInfo->referer;
+			v[0].bstrVal=jobInfo->referer;
 			for(int j=0; j<linksCount; j++) {
-				LinkInfo l = downloadInfo->links[j];
+				LinkInfo l = jobInfo->links[j];
 				v[2].bstrVal=l.url;
-				v[1].bstrVal=l.comment;
+				v[1].bstrVal=l.desc;
 				h.invoke(&di_AddUrlWithReferer,v,3);
 			}
 			if(linksCount>1) {
@@ -959,22 +959,22 @@ class DMSWestByte :
 public:
 
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
-		int linksCount=downloadInfo->linksCount;
+		int linksCount=jobInfo->dlcount;
 		
 		if(linksCount>0)
 		{
 			
 			VARIANT v[2];
 			v[0].vt = VT_BSTR ;
-			v[0].bstrVal=downloadInfo->referer; // referer
+			v[0].bstrVal=jobInfo->referer; // referer
 			HELPER(h);
-			CookieManager cm(downloadInfo);
+			CookieManager cm(jobInfo);
 			if(linksCount==1) 
 			{
 				v[1].vt = VT_BSTR;
-				v[1].bstrVal=downloadInfo->links[0].url;
+				v[1].bstrVal=jobInfo->links[0].url;
 				
 				h.invoke("AddURL",v,2);
 			} 
@@ -983,9 +983,9 @@ public:
 
 				FGArray fgArray(linksCount * 2);
 				for (int j=0; j < linksCount; j++) {
-					LinkInfo l = downloadInfo->links[j];
+					LinkInfo l = jobInfo->links[j];
 					fgArray.addString(l.url);
-					fgArray.addString(l.comment);
+					fgArray.addString(l.desc);
 				}
 				
 				fgArray.asVariant(&v[1]);
@@ -1009,24 +1009,24 @@ protected:
 public:
 	const char * getName() { return "Orbit"; }
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
-		CookieManager cm(downloadInfo);
+		CookieManager cm(jobInfo);
 
 		HELPER(h);
-		int linksCount=downloadInfo->linksCount;
+		int linksCount=jobInfo->dlcount;
 		if(linksCount>0)
 		{
 			if(linksCount<2)
 			{
-				LinkInfo link=downloadInfo->links[0];
+				LinkInfo link=jobInfo->links[0];
 				VARIANT v[4];
 				
 				v[3].vt=v[2].vt=v[1].vt=v[0].vt=VT_BSTR;
 				
-				v[0].bstrVal=link.cookie;
-				v[1].bstrVal=downloadInfo->referer;
-				v[2].bstrVal=link.comment;
+				v[0].bstrVal=link.cookies;
+				v[1].bstrVal=jobInfo->referer;
+				v[2].bstrVal=link.desc;
 				v[3].bstrVal=link.url;
 
 				h.invoke("download",v,4);
@@ -1038,15 +1038,15 @@ public:
 				FGArray txtArray(linksCount);
 				for(int i = 0; i < linksCount; i++) 
 				{
-					urlArray.addString( downloadInfo->links[i].url );
-					txtArray.addString( downloadInfo->links[i].comment );
+					urlArray.addString( jobInfo->links[i].url );
+					txtArray.addString( jobInfo->links[i].desc );
 				}
 
 				urlArray.asVariant(&v[3]);
 				txtArray.asVariant(&v[2]);
 				v[1].vt=v[0].vt=VT_BSTR;
-				v[1].bstrVal=downloadInfo->referer;
-				v[0].bstrVal=downloadInfo->links[0].cookie;
+				v[1].bstrVal=jobInfo->referer;
+				v[0].bstrVal=jobInfo->links[0].cookies;
 				
 				h.invoke("downloadList",v, 4);
 			}
@@ -1089,21 +1089,21 @@ public:
 	{
 		delete findProgram();
 	}
-	void dispatch(const DownloadInfo *downloadInfo) 
+	void dispatch(const JobInfo *jobInfo) 
 	{
 		char *cmdLine=NULL;
 		char *path=NULL;
 		char *arg;
 		char *tgargs=NULL;
 		BOOL ret = false;
-		if(downloadInfo->linksCount)
+		if(jobInfo->dlcount)
 		{
-			char *referer=downloadInfo->referer;
+			char *referer=jobInfo->referer;
 
-			if (downloadInfo->linksCount == 1)
+			if (jobInfo->dlcount == 1)
 			{
 				char *pattern="--reference=%s \"%s\"";
-				char *url=downloadInfo->links[0].url;
+				char *url=jobInfo->links[0].url;
 				size_t tgargsLen = strlen(referer)+
 					strlen(url)+
 					strlen(pattern);
@@ -1125,9 +1125,9 @@ public:
 				{ 
 					throw "FlashGot can't create file TEMPURL.LST for wxDownload Fast";
 				} 
-				for(int j=0,count=downloadInfo->linksCount; j<count; j++)
+				for(int j=0,count=jobInfo->dlcount; j<count; j++)
 				{
-					fputs(downloadInfo->links[j].url,fp);
+					fputs(jobInfo->links[j].url,fp);
 					fputc('\n',fp);
 				}
 				fclose(fp);
@@ -1167,24 +1167,24 @@ public:
 		return "Download Accelerator Manager"; 
 	}
 
-	void dispatch(const DownloadInfo *downloadInfo){
+	void dispatch(const JobInfo *jobInfo){
 
-		long lc = downloadInfo->linksCount;
+		long lc = jobInfo->dlcount;
 
-		std::string referer = utf8::narrow(downloadInfo->referer);
-		std::string refCookies = utf8::narrow(downloadInfo->dlpageCookies);
-		std::string useragent = utf8::narrow(downloadInfo->useragent);
+		std::string referer = utf8::narrow(jobInfo->referer);
+		std::string refCookies = utf8::narrow(jobInfo->dlpageCookies);
+		std::string useragent = utf8::narrow(jobInfo->useragent);
 
 		Json jsonMsg = Json::Parse("{}");
 
 		if(lc == 1)
 		{
 			jsonMsg.AddProperty("t", Json(2));
-			jsonMsg.AddProperty("u", Json(utf8::narrow(downloadInfo->links[0].url)));
+			jsonMsg.AddProperty("u", Json(utf8::narrow(jobInfo->links[0].url)));
 			jsonMsg.AddProperty("c", Json(refCookies));
 			jsonMsg.AddProperty("r", Json(referer));
-			jsonMsg.AddProperty("p", Json(utf8::narrow(downloadInfo->links[0].postdata)));
-			jsonMsg.AddProperty("i", Json(utf8::narrow(downloadInfo->links[0].comment)));
+			jsonMsg.AddProperty("p", Json(utf8::narrow(jobInfo->links[0].postdata)));
+			jsonMsg.AddProperty("i", Json(utf8::narrow(jobInfo->links[0].desc)));
 			jsonMsg.AddProperty("a", Json(""));
 		}
 		else if(lc > 1)
@@ -1193,9 +1193,9 @@ public:
 			std::string urlsStr = "";
 			for(int i=0; i<lc; i++)
 			{
-				urlsStr.append(utf8::narrow(downloadInfo->links[i].url));
+				urlsStr.append(utf8::narrow(jobInfo->links[i].url));
 				urlsStr.append("\\n");
-				urlsStr.append(utf8::narrow(downloadInfo->links[i].comment));
+				urlsStr.append(utf8::narrow(jobInfo->links[i].desc));
 				//the last url should not have a new line
 				if(lc-i>1){
 					urlsStr.append("\\n");
@@ -1256,21 +1256,21 @@ public:
 	
 	const char * getName() { return "ReGet"; }
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
-		CookieManager cm(downloadInfo);
+		CookieManager cm(jobInfo);
 		HELPER(h);
 
-		int linksCount = downloadInfo->linksCount;
+		int linksCount = jobInfo->dlcount;
 		if(linksCount == 1){
-			LinkInfo l = downloadInfo->links[0];
+			LinkInfo l = jobInfo->links[0];
 			VARIANT conf;
 			conf.vt = VT_BOOL;
 			conf.boolVal = VARIANT_TRUE;
 			h.set("Url", l.url);
-			h.set("Referer", downloadInfo->referer);
-			h.set("Cookie", l.cookie);
-			h.set("Info", l.comment);
+			h.set("Referer", jobInfo->referer);
+			h.set("Cookie", l.cookies);
+			h.set("Info", l.desc);
 			h.set("PostData", l.postdata);
 			h.set("Confirmation", &conf);
 			h.invoke("AddDownload");
@@ -1279,13 +1279,13 @@ public:
 		{
 			VARIANT v[5];
 			v[4].vt = v[3].vt = v[2].vt = v[1].vt = v[0].vt = VT_BSTR;
-			for (long j=0, len=downloadInfo->linksCount; j<len ; j++) 
+			for (long j=0, len=jobInfo->dlcount; j<len ; j++) 
 			{ 
-				v[4].bstrVal=downloadInfo->links[j].url;
-				v[3].bstrVal=downloadInfo->referer;
-				v[2].bstrVal=downloadInfo->links[j].cookie;
-				v[1].bstrVal=downloadInfo->links[j].comment;
-				v[0].bstrVal=downloadInfo->links[j].postdata;
+				v[4].bstrVal=jobInfo->links[j].url;
+				v[3].bstrVal=jobInfo->referer;
+				v[2].bstrVal=jobInfo->links[j].cookies;
+				v[1].bstrVal=jobInfo->links[j].desc;
+				v[0].bstrVal=jobInfo->links[j].postdata;
 				h.invoke("AddDownloadToList",v,5);
 			}
 
@@ -1307,13 +1307,13 @@ protected:
 public:
 	const char * getName() { return "ReGet(Legacy)"; }
 	
-	void dispatch(const DownloadInfo *downloadInfo) 
+	void dispatch(const JobInfo *jobInfo) 
 	{	
-		int linksCount=downloadInfo->linksCount;
+		int linksCount=jobInfo->dlcount;
 		
 		VARIANT v[5];
 		v[0].vt=v[1].vt=v[2].vt=v[3].vt=v[4].vt=VT_BSTR;
-		bstr_t referer=downloadInfo->referer; // referer
+		bstr_t referer=jobInfo->referer; // referer
 		
 		FGCOMHelper *regetAll=NULL;
 		DISPID di_AddDownload;
@@ -1322,25 +1322,25 @@ public:
 			regetAll=new FGCOMHelper(getProgId());
 			regetAll->getMemberID("AddDownloadToList",&di_AddDownload);
 		} else if(linksCount==1) {
-			LinkInfo l=downloadInfo->links[0];
+			LinkInfo l=jobInfo->links[0];
 			if(strlen(l.postdata)) {
 				try 
 				{
 					FGCOMHelper dl("ReGetDx.RegetDownloadApi");
 					dl.set("Url",l.url);
 					dl.set("Referer",referer);
-					dl.set("Cookie",l.cookie);
-					dl.set("Info",l.comment);
+					dl.set("Cookie",l.cookies);
+					dl.set("Info",l.desc);
 					dl.set("PostData",l.postdata);
 					dl.invoke("AddDownload");
 					return;
 				} catch(...) {}
 			}
 		}
-		CookieManager cm(downloadInfo);
+		CookieManager cm(jobInfo);
 		for(int j=0; j<linksCount; j++) 
 		{	
-			LinkInfo l=downloadInfo->links[j];
+			LinkInfo l=jobInfo->links[j];
 			
 			for(int attempts=120; attempts-->0;) 
 			{ // we give ReGet 2mins to wake up
@@ -1350,8 +1350,8 @@ public:
 					
 					dl.set("Url",l.url);
 					dl.set("Referer",referer);
-					dl.set("Info",l.comment);
-					dl.set("Cookie",l.cookie); // -- it seems a dummy property, we use CookieManager which works
+					dl.set("Info",l.desc);
+					dl.set("Cookie",l.cookies); // -- it seems a dummy property, we use CookieManager which works
 					if(regetAll) {
 						VARIANT vdl;
 						vdl.vt=VT_DISPATCH;
@@ -1393,7 +1393,7 @@ public:
 	
 	const char * getName() { return "Star Downloader"; }
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
 		
 		HELPER(downloader);
@@ -1402,9 +1402,9 @@ public:
 		
 		VARIANT v[2];
 		v[0].vt = v[1].vt = VT_BSTR;
-		v[0].bstrVal = downloadInfo->referer; // referrer
-		for (long j=0, len=downloadInfo->linksCount; j < len ; j++) { 
-			v[1].bstrVal=downloadInfo->links[j].url;
+		v[0].bstrVal = jobInfo->referer; // referrer
+		for (long j=0, len=jobInfo->dlcount; j < len ; j++) { 
+			v[1].bstrVal=jobInfo->links[j].url;
 			downloader.invoke(&di_DownloadURL,v,2);
 		}
 	}
@@ -1423,21 +1423,21 @@ public:
 	
 	const char * getName() { return "Thunder"; }
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
-		CookieManager cm(downloadInfo);
+		CookieManager cm(jobInfo);
 		HELPER(h);
 		VARIANT v[8];
 		v[7].vt = v[6].vt = v[5].vt = v[4].vt = v[3].vt = VT_BSTR;
 		v[2].vt = v[1].vt = v[0].vt = VT_INT;
 
-		for (long j=0, len=downloadInfo->linksCount; j<len ; j++) 
+		for (long j=0, len=jobInfo->dlcount; j<len ; j++) 
 		{ 
-			v[7].bstrVal=downloadInfo->links[j].url;
+			v[7].bstrVal=jobInfo->links[j].url;
 			v[6].bstrVal=_bstr_t("");
 			v[5].bstrVal=_bstr_t("");
-			v[4].bstrVal=downloadInfo->links[j].comment;
-			v[3].bstrVal=downloadInfo->referer;
+			v[4].bstrVal=jobInfo->links[j].desc;
+			v[3].bstrVal=jobInfo->referer;
 			v[2].intVal=-1;
 			v[1].intVal=0;
 			v[0].intVal=-1;
@@ -1458,14 +1458,14 @@ protected:
 public:
 	const char * getName() { return "GigaGet"; }
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
-		CookieManager cm(downloadInfo);
+		CookieManager cm(jobInfo);
 		HELPER(h);
 		VARIANT v[2];
 		v[0].vt= VT_BYREF;
 
-		FGArray fgArray(downloadInfo);
+		FGArray fgArray(jobInfo);
 		v[1].vt=VT_BYREF | VT_VARIANT;
 		v[1].pvarVal=fgArray.asVariant();
 		h.get("AddAllUrl",v,1);
@@ -1499,7 +1499,7 @@ protected:
 public:
 	const char * getName() { return "TrueDownloader"; }
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
 		
 		HELPER(downloader);
@@ -1508,11 +1508,11 @@ public:
 		
 		VARIANT v[3];
 		v[0].vt = v[1].vt = v[2].vt = VT_BSTR;
-		v[1].bstrVal = downloadInfo->referer; // referrer
-		for (long j=0, len=downloadInfo->linksCount; j < len ; j++) 
+		v[1].bstrVal = jobInfo->referer; // referrer
+		for (long j=0, len=jobInfo->dlcount; j < len ; j++) 
 		{ 
-			v[2].bstrVal=downloadInfo->links[j].url;
-			v[0].bstrVal=downloadInfo->links[j].cookie;
+			v[2].bstrVal=jobInfo->links[j].url;
+			v[0].bstrVal=jobInfo->links[j].cookies;
 			downloader.invoke(&di_MenuURL,v,3);
 		}
 	}
@@ -1532,7 +1532,7 @@ public:
 		dispatch(NULL);
 	}
 
-	void dispatch(const DownloadInfo *downloadInfo)
+	void dispatch(const JobInfo *jobInfo)
 	{
 		
 	
@@ -1555,33 +1555,33 @@ public:
 		struct stat statbuf;
 		if(stat(app_path,&statbuf))  throw "Can't find WellGet executable";
 		
-		if(downloadInfo && downloadInfo->linksCount > 0)
+		if(jobInfo && jobInfo->dlcount > 0)
 		{
-			CookieManager cm(downloadInfo);
+			CookieManager cm(jobInfo);
 			char cmdLine[32767];
 			//todo: what is this op_one? it doesn't work with dlgrab
-			if(downloadInfo->opType==OP_ONE) 
+			if(jobInfo->optype==OP_ONE) 
 			{
 				try // try COM first, to overcome command line bug in latest (1.25 - 0118) build
 				{
 					HELPER(h);
 	
-					LinkInfo l=downloadInfo->links[0];
+					LinkInfo l=jobInfo->links[0];
 					VARIANT v[3];
 					v[2].vt=v[1].vt=v[0].vt=VT_BSTR;
 					v[2].bstrVal=l.url; // URL
-					v[1].bstrVal=l.comment;
-					v[0].bstrVal=downloadInfo->referer; // referer
+					v[1].bstrVal=l.desc;
+					v[0].bstrVal=jobInfo->referer; // referer
 					h.invoke("AddURL", v, 3);
 					return;
 				} catch(...)
 				{ // fall back to command line
-					LinkInfo l=downloadInfo->links[0];
+					LinkInfo l=jobInfo->links[0];
 					
 					sprintf_s(cmdLine, sizeof(cmdLine), "%s wget -r:\"%s\" -c:\"%s\" \"%s\"",
 						app_path,
-						(char *)downloadInfo->referer,
-						(char *)l.comment, (char *)l.url);
+						(char *)jobInfo->referer,
+						(char *)l.desc, (char *)l.url);
 				} 
 			}
 			else 
@@ -1598,13 +1598,13 @@ public:
 				{ 
 					throw "FlasGot can't create file TEMPURL.TXT for WellGet";
 				} 
-				fputs(downloadInfo->referer,fp);
+				fputs(jobInfo->referer,fp);
 				fputc('\n',fp);
-				for(int j=0,count=downloadInfo->linksCount; j<count; j++) {
-					LinkInfo l = downloadInfo->links[j];
+				for(int j=0,count=jobInfo->dlcount; j<count; j++) {
+					LinkInfo l = jobInfo->links[j];
 					fputs(l.url,fp);
 					fputc('\n',fp);
-					fputs(l.comment,fp);
+					fputs(l.desc,fp);
 					fputc('\n',fp);
 				}
 				fclose(fp);
@@ -1694,30 +1694,30 @@ void performJob(const Json &job)
 
 	try 
 	{
-		DownloadInfo downloadInfo;
+		JobInfo jobInfo;
 
-		downloadInfo.linksCount = job["dlcount"].AsInt();
-		downloadInfo.dmName = job["dmname"].AsString();
+		jobInfo.dlcount = job["dlcount"].AsInt();
+		jobInfo.dmName = job["dmname"].AsString();
 		int typeId = job["optype"].AsInt();
-		downloadInfo.opType = (typeId<OP_MIN||typeId>OP_MAX)? OP_ALL : (OpType) typeId;
-		downloadInfo.referer = utf8::widen(job["dlpage_url"].AsString()).c_str();
-		downloadInfo.dlpageReferer = utf8::widen(job["dlpage_referer"].AsString()).c_str();
-		downloadInfo.dlpageCookies = utf8::widen(job["dlpage_cookies"].AsString()).c_str();
-		downloadInfo.useragent = utf8::widen(job["useragent"].AsString()).c_str();
+		jobInfo.optype = (typeId<OP_MIN||typeId>OP_MAX)? OP_ALL : (OpType) typeId;
+		jobInfo.referer = utf8::widen(job["dlpage_url"].AsString()).c_str();
+		jobInfo.dlpageReferer = utf8::widen(job["dlpage_referer"].AsString()).c_str();
+		jobInfo.dlpageCookies = utf8::widen(job["dlpage_cookies"].AsString()).c_str();
+		jobInfo.useragent = utf8::widen(job["useragent"].AsString()).c_str();
 			
-		for(int i=0; i<downloadInfo.linksCount; i++)
+		for(int i=0; i<jobInfo.dlcount; i++)
 		{
 			LinkInfo info;
 			info.url = utf8::widen(job["downloads"][i]["url"].AsString()).c_str();
-			info.comment = utf8::widen(job["downloads"][i]["desc"].AsString()).c_str();
-			info.cookie = utf8::widen(job["downloads"][i]["cookies"].AsString()).c_str();
+			info.desc = utf8::widen(job["downloads"][i]["desc"].AsString()).c_str();
+			info.cookies = utf8::widen(job["downloads"][i]["cookies"].AsString()).c_str();
 			info.postdata = utf8::widen(job["downloads"][i]["postdata"].AsString()).c_str();
 			info.filename = utf8::widen(job["downloads"][i]["filename"].AsString()).c_str();
 			info.extension = utf8::widen(job["downloads"][i]["extension"].AsString()).c_str();
-			downloadInfo.links.push_back(info);
+			jobInfo.links.push_back(info);
 		}
 
-		(dms=createDMS(downloadInfo.dmName.c_str()))->dispatch(&downloadInfo);
+		(dms=createDMS(jobInfo.dmName.c_str()))->dispatch(&jobInfo);
 		completed=TRUE;
 	} 
 	catch(_com_error ce)

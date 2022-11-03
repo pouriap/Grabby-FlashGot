@@ -40,8 +40,8 @@ enum OpType {
 typedef struct _LinkInfo 
 {
 	bstr_t url;
-	bstr_t comment;
-	bstr_t cookie;
+	bstr_t desc;
+	bstr_t cookies;
 	bstr_t postdata;
 	bstr_t filename;
 	bstr_t extension;
@@ -49,17 +49,17 @@ typedef struct _LinkInfo
 
 #define EXTRAS_COUNT 6
 
-typedef struct _DownloadInfo 
+typedef struct _JobInfo 
 {
 	std::string dmName;
-	OpType opType;
+	OpType optype;
 	bstr_t referer;
 	std::vector<LinkInfo> links;
-	int linksCount;
+	int dlcount;
 	bstr_t dlpageCookies;
 	bstr_t dlpageReferer;
 	bstr_t useragent;
-} DownloadInfo;
+} JobInfo;
 
 void fail(char *msg, int code);
 
@@ -67,16 +67,16 @@ class CookieManager
 {
 	private: 
 		
-		const DownloadInfo *downloadInfo;
+		const JobInfo *jobInfo;
 	public:
-		CookieManager() : downloadInfo(NULL) {}
+		CookieManager() : jobInfo(NULL) {}
 		
-		CookieManager(const DownloadInfo *downloadInfo) : downloadInfo(downloadInfo)
+		CookieManager(const JobInfo *jobInfo) : jobInfo(jobInfo)
 		{
 			//todo: this used to be extras[4]
 			//since grabby doesn't specify cookie lifetime currently i changed this to one year
 			int hoursToLive = 24*365;
-			setAll(downloadInfo, 3600 * (hoursToLive == 0 ? 1 : hoursToLive));
+			setAll(jobInfo, 3600 * (hoursToLive == 0 ? 1 : hoursToLive));
 		}
 
 		static void makeExpiration(char *expiration, size_t buflen, int offset)
@@ -112,14 +112,14 @@ class CookieManager
 			
 		}
 
-		static void setAll(const DownloadInfo *downloadInfo, long offsetExpiration)
+		static void setAll(const JobInfo *jobInfo, long offsetExpiration)
 		{
 			char expiration[64];
 			makeExpiration(expiration,64,offsetExpiration);
-			for(int j=downloadInfo->linksCount; j-->0;)
+			for(int j=jobInfo->dlcount; j-->0;)
 			{
-				LinkInfo l = downloadInfo->links[j];
-				setCookie(&l.url,&l.cookie,expiration);
+				LinkInfo l = jobInfo->links[j];
+				setCookie(&l.url,&l.cookies,expiration);
 			}
 		}
 	
@@ -159,20 +159,20 @@ class FGArray
 			init(elemCount);
 		}
 		
-		FGArray(const DownloadInfo *downloadInfo)
+		FGArray(const JobInfo *jobInfo)
 		{		
-			init(downloadInfo->linksCount * 2 + 1); // linksCount * 2 (url,info)
-			addString(downloadInfo->referer);
-			addLinks(downloadInfo);
+			init(jobInfo->dlcount * 2 + 1); // linksCount * 2 (url,info)
+			addString(jobInfo->referer);
+			addLinks(jobInfo);
 			
 		}
 		
-		void addLinks(const DownloadInfo *downloadInfo) {
-			for (int j=0, linksCount=downloadInfo->linksCount; j < linksCount ; j++) 
+		void addLinks(const JobInfo *jobInfo) {
+			for (int j=0, linksCount=jobInfo->dlcount; j < linksCount ; j++) 
 			{
-				LinkInfo l = downloadInfo->links[j];
+				LinkInfo l = jobInfo->links[j];
 				addString(l.url);
-				addString(l.comment);
+				addString(l.desc);
 			}
 		}
 
@@ -338,7 +338,7 @@ public:
 	
 	
 	virtual void check(void) = 0;
-	virtual void dispatch(const DownloadInfo *downloadInfo) = 0;
+	virtual void dispatch(const JobInfo *jobInfo) = 0;
 	virtual const char *getName(void) = 0;
 
 };
@@ -525,7 +525,7 @@ public:
 	{ 
 		return "Download Accelerator Plus";  
 	}
-	void dispatch(const DownloadInfo *downloadInfo);
+	void dispatch(const JobInfo *jobInfo);
 	
 };
 
