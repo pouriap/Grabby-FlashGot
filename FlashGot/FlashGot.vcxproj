@@ -95,6 +95,7 @@
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="base64.hpp" />
     <ClInclude Include="FlashGot.h" />
     <ClInclude Include="IDManTypeInfo.h" />
     <ClInclude Include="jsonla.h" />

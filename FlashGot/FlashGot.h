@@ -22,6 +22,13 @@ extern CComModule _Module;
 #define BUF2K 2048
 #define BUF4K 4096
 
+#define STATUS_SUCC 1
+#define STATUS_FAIL 2
+
+#define ERR_MARFORMED_HEADER 17
+#define ERR_JOB_FAILED 0x02000
+#define ERR_UNSUPPORTED_DM -8000
+#define ERR_GENERAL 1
 
 #define VERSION "0.11.0b"
 

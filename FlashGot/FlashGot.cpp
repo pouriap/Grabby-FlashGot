@@ -26,6 +26,12 @@
 
 #include "stdafx.h"
 #include "FlashGot.h"
+#include "base64.hpp"
+#include <sstream>
+
+using namespace std;
+using namespace ggicci;
+using namespace base64;
 
 FGCOMGuard *FGCOMGuard::instance = NULL;
 int FGCOMGuard::refCount = 0;
@@ -35,165 +41,13 @@ int FGCOMGuard::refCount = 0;
 
 char g_buf[BUF_SIZE];
 wchar_t g_wbuf[BUF_SIZE];
-char *g_private = NULL;
 
-#define SHRED_PASSES 3
-#define SHRED_ERR 64
-
-
-// DOD 5220.22-M
-bool file_overwrite(HANDLE FileHandle, ULONGLONG Length)
-{
-    #define CLEANBUFSIZE 65536
-	static PBYTE	cleanBuffer[3];
-	static BOOLEAN	buffersAllocated = false;
-
-	DWORD		i, j, passes;
-	ULONGLONG	totalWritten;
-	ULONG		bytesWritten, bytesToWrite;
-	LONG		seekLength;
-	BOOLEAN		status;
-
-	if( !buffersAllocated ) 
-	{
-		srand( (unsigned)time( NULL ) );
-	
-		for( i = 0; i < 3; i++ ) {
-
-			cleanBuffer[i] = (PBYTE) VirtualAlloc( NULL, CLEANBUFSIZE, MEM_COMMIT, PAGE_READWRITE );
-			if( !cleanBuffer[i] ) {
-
-				for( j = 0; j < i; j++ ) {
-
-					VirtualFree( cleanBuffer[j], 0, MEM_RELEASE );
-				}
-				return FALSE;
-			}
-
-			switch( i ) 
-			{
-
-				case 0:
-				break;
-				case 1:
-					memset( cleanBuffer[i], 0xFF, CLEANBUFSIZE );
-				break;
-				case 2:
-					for( j = 0; j < CLEANBUFSIZE; j++ ) cleanBuffer[i][j] = (BYTE) rand();
-				break;
-			}
-		}	
-		buffersAllocated = true;
-	}
-
-	seekLength = (LONG) Length;
-	for (passes = 0; passes < SHRED_PASSES; passes++) 
-	{
-		if (passes != 0) 
-		{
-			SetFilePointer( FileHandle, -seekLength, NULL, FILE_CURRENT );
-		}
-
-		for (i = 0; i < 3; i++) 
-		{
-			if (i != 0) 
-			{
-				SetFilePointer( FileHandle, -seekLength, NULL, FILE_CURRENT );
-			}
-
-			totalWritten = 0;
-			while (totalWritten < Length) 
-			{
-
-				if (Length - totalWritten > 1024*1024) 
-				{
-					bytesToWrite = 1024*1024;
-				} 
-				else 
-				{
-					bytesToWrite = (ULONG) (Length - totalWritten );
-				}
-				if (bytesToWrite > CLEANBUFSIZE) bytesToWrite = CLEANBUFSIZE;
-
-				status = WriteFile( FileHandle, cleanBuffer[i], bytesToWrite, &bytesWritten, NULL );
-				if( !status ) return FALSE;
-				totalWritten += bytesWritten;
-			}
-		}
-	}
-	return true;
-}
-
-int file_shred(const char* FileName) 
-{
-	HANDLE	hFile;
-	ULONGLONG bytesToWrite, bytesWritten;
-	ULARGE_INTEGER fileLength;
-	
-    DWORD FileLengthHi, FileLengthLo; 
-
-	hFile = CreateFile(FileName, GENERIC_WRITE, 
-						FILE_SHARE_READ|FILE_SHARE_WRITE,
-						NULL, OPEN_EXISTING, FILE_FLAG_WRITE_THROUGH, NULL);
-	if( hFile == INVALID_HANDLE_VALUE ) {
-		return SHRED_ERR;
-	}
-	
-	FileLengthLo = GetFileSize(hFile, &FileLengthHi);
-	
-	if (FileLengthLo || FileLengthHi) 
-	{
-		FileLengthLo--;
-		if (FileLengthLo == (DWORD) -1 && FileLengthHi) FileLengthHi--;
-		
-		SetFilePointer( hFile, FileLengthLo, (PLONG)&FileLengthHi, FILE_BEGIN );
-
-		
-		if (!file_overwrite(hFile, 1)) 
-		{
-			CloseHandle( hFile );
-			return SHRED_ERR;
-		}
-
-		
-		SetFilePointer (hFile, 0, NULL, FILE_BEGIN);
-		fileLength.LowPart = FileLengthLo;
-		fileLength.HighPart = FileLengthHi;
-		bytesWritten = 0;
-		while (bytesWritten < fileLength.QuadPart) 
-		{
-
-			bytesToWrite = min(fileLength.QuadPart - bytesWritten, 65536 );
-			if (!file_overwrite(hFile, (DWORD) bytesToWrite)) 
-			{
-				CloseHandle(hFile);
-				return SHRED_ERR;
-			}
-			bytesWritten += bytesToWrite;
-		}
-	}
-
-	CloseHandle(hFile);
-		
-	return DeleteFile(FileName) ? 0 : SHRED_ERR;
-}
 
 extern void fail(char *msg, int code) 
 {
-	if (g_private) file_shred(g_private);
-
-	MessageBox(NULL, msg,
-					  "FlashGot Error",
-					  MB_OK | MB_ICONERROR);
+	printf(msg);
 	exit(code);
 }
-
-
-using namespace std;
-
-
-
-
 
 class DMSAddUrlFamily :
 	public DMSupportCOM
@@ -242,8 +96,6 @@ public:
 
 	void dispatch(const DownloadInfo *downloadInfo)
 	{
-		using namespace ggicci;
-
 		int lc = downloadInfo->linksCount;
 		std::string referer = utf8::narrow(downloadInfo->referer);
 		std::string refCookies = utf8::narrow(downloadInfo->extras[1]);
@@ -322,7 +174,6 @@ public:
 
 	void dispatch(const DownloadInfo *downloadInfo){
 
-		using namespace ggicci;
 
 		long lc = downloadInfo->linksCount;
 
@@ -484,7 +335,7 @@ public:
 			LinkInfo link = downloadInfo->links[0];
 			char buf[4096];
 			sprintf_s(buf, 4096, "%s\n%s\n%s", (char *)link.url, (char *)link.comment, (char *)downloadInfo->referer);
-			fail(buf, 1);
+			fail(buf, ERR_GENERAL);
 		}
 	}
 };
@@ -532,8 +383,6 @@ public:
 	}
 
 	void dispatch(const DownloadInfo *downloadInfo){
-
-		using namespace ggicci;
 
 		long lc = downloadInfo->linksCount;
 		if(lc<1) return;
@@ -1541,8 +1390,6 @@ public:
 
 	void dispatch(const DownloadInfo *downloadInfo){
 
-		using namespace ggicci;
-
 		long lc = downloadInfo->linksCount;
 
 		std::string referer = utf8::narrow(downloadInfo->referer);
@@ -2052,7 +1899,7 @@ DMSupport* createDMS(char *name) {
 	DMSupport *res=DMSFactory::getInstance()->getDMS(name);
 	if(res) return res;
 	sprintf_s(g_buf, BUF_SIZE, "Unsupported Download Manager %s", name);
-	fail(g_buf, -8000);
+	fail(g_buf, ERR_UNSUPPORTED_DM);
 	return NULL;
 }
 
@@ -2065,39 +1912,30 @@ wchar_t *UTF8toUnicode(const char *src) {
 		;
 }
 
-bstr_t * readLine(FILE *stream, bstr_t *buffer) 
+bstr_t * readLine(std::istringstream &s, bstr_t *buffer) 
 {
-	
 	bool isLine=false;
-	for(char *res; res=fgets(g_buf,BUF_SIZE,stream); )
+	while(!s.eof())
 	{
-		size_t lastPos=strlen(res)-1;
+		s.getline(g_buf, BUF_SIZE);
+		size_t lastPos=strlen(g_buf)-1;
 		while(lastPos>=0 && 
-			(res[lastPos]==0x0a || res[lastPos]==0x0d)
+			(g_buf[lastPos]==0x0a || g_buf[lastPos]==0x0d)
 			)
 		{
-			res[lastPos--]='\0';
+			g_buf[lastPos--]='\0';
 			isLine=true;
 		}
 		
-		buffer->Assign(*buffer + UTF8toUnicode((const char*) res));
+		buffer->Assign(*buffer + UTF8toUnicode((const char*) g_buf));
 		if(isLine) break;
 	}
 	return buffer;
 }
 
-
-
-int performTest(char *outfname)
+void performTest()
 {
-	FILE *fp;
-	if (outfname) 
-	{
-		freopen_s(&fp, outfname, "w", stdout);
-		freopen_s(&fp, outfname,"a", stderr);
-	}
 	DMSFactory::getInstance()->checkAll();
-	exit(0);
 }
 
 
@@ -2115,7 +1953,7 @@ void parseHeader(DownloadInfo *downloadInfo, char *header_buf)
 		} 
 		else
 		{
-			if(j!=HEADER_COUNT) fail("Malformed header",17);	
+			if(j!=HEADER_COUNT) fail("Malformed header", ERR_MARFORMED_HEADER);	
 			break;
 		}
 	}
@@ -2128,8 +1966,10 @@ void parseHeader(DownloadInfo *downloadInfo, char *header_buf)
 	downloadInfo->folder = bstr_t(UTF8toUnicode((const char *)header[3]));
 }
 
-void processJobFile(FILE *f)
+void performJob(const string &jobStr)
 {
+	std::istringstream s(jobStr);
+
 	DMSupport *dms = NULL;
 	const char *errMsg="Download manager not properly installed.\n%s";
 	BOOL completed=FALSE;
@@ -2138,8 +1978,9 @@ void processJobFile(FILE *f)
 		DownloadInfo downloadInfo;
 
 		char header_buf[BUF_SIZE];
-		if(fgets(header_buf, BUF_SIZE, f))
+		if(!s.eof())
 		{
+			s.getline(header_buf, BUF_SIZE);
 			parseHeader(&downloadInfo, header_buf);
 			int linksCount=downloadInfo.linksCount;
 			int parmsCount = 1 + linksCount * 6 + EXTRAS_COUNT; // referer + (url + info + cookie + postdata + filename + ext) * 6 + referer cookie + referer referer + useragent :-)
@@ -2151,7 +1992,7 @@ void processJobFile(FILE *f)
 			for(int j=0; j<parmsCount; j++) {
 				parms[j]="";
 				bstr_t *buffer = &parms[j];
-				readLine(f, buffer);
+				readLine(s, buffer);
 			}
 			
 			downloadInfo.referer = parms[0];
@@ -2159,7 +2000,9 @@ void processJobFile(FILE *f)
 			downloadInfo.extras = &parms[parmsCount - EXTRAS_COUNT];
 
 			(dms=createDMS(downloadInfo.dmName))->dispatch(&downloadInfo);
-			printf("%s",downloadInfo.folder);
+			//TODO: what did this do?
+			//it caused gibberish output so I commented it out 
+			//printf("%s",downloadInfo.folder);
 		}
 		completed=TRUE;
 	} 
@@ -2176,80 +2019,32 @@ void processJobFile(FILE *f)
 	
 	if(dms) delete dms;
 	
-	if(!completed) fail(g_buf,0x02000);
+	if(!completed) fail(g_buf, ERR_JOB_FAILED);
 }
-
-int performDownload(char *fname)
-{
-	FILE *f;
-	size_t doneLen = strlen(fname) + 6;
-	char *done = new char[doneLen];
-	
-	sprintf_s(done, doneLen, "%s.done", fname);	
-	//add 'N' mode so the file handle will not be inherited by those nasty DMs that will be run from this process
-	if(fopen_s(&f, fname, "rbN") != 0)  
-	{
-		struct stat statbuf;
-		if(stat(done, &statbuf)) // done file doesn't exist  
-		{
-			sprintf_s(g_buf, BUF_SIZE, "Can't open file %s", fname);
-			fail(g_buf, 0x01000);
-		} else {
-			remove(done);
-		}
-	}
-	else
-	{	
-		if(!feof(f))	
-		{
-			processJobFile(f);
-		}
-		else 
-		{
-			sprintf_s(g_buf, BUF_SIZE, "Temporary file %s is empty", fname);
-			fail(g_buf,0x03000);
-		}
-		fclose(f);
-		
-		if(!strstr(done, "test"))
-		{
-			if (g_private)
-			{
-				file_shred(fname);
-			} else {
-				remove(done);
-				//rename(fname, done);
-			}
-		}
-	}
-	delete [] done;
-	return 0;
-}
-
 
 int main(int argc, char* argv[])
 {
-
-    if(argc < 2 || strcmp(argv[1], "-o") == 0)
+	//if we don't have any arguments just do the test (check for all download managers)
+    if(argc == 1)
 	{
-		return performTest(argc > 2 ? argv[2] : NULL);
+		performTest();
+		exit(0);
+	}
+
+	else if(argc == 2)
+	{
+		try
+		{
+			string jobStr = from_base64(argv[1]);
+			performJob(jobStr);
+		}
+		catch(...)
+		{
+			printf("failed to read download data");
+			exit(1);
+		}
 	}
 	
-	if (argc >= 2 && strcmp(argv[1], "-s") == 0)
-	{
-		int ret = 0;
-		for(int pos = 2; pos < argc; pos++)
-		  ret |= file_shred(argv[pos]);
-
-		return ret;
-	}
-	
-	int pos = 1;
-    if (argc > 2 && strcmp(argv[1], "-p") == 0)
-	{
-		g_private = argv[++pos];
-	}
-	performDownload(argv[pos]);
 }
 
 int WINAPI
