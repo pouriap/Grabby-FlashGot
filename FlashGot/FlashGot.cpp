@@ -1697,23 +1697,23 @@ void performJob(const Json &job)
 		JobInfo jobInfo;
 
 		jobInfo.dlcount = job["dlcount"].AsInt();
-		jobInfo.dmName = job["dmname"].AsString();
+		jobInfo.dmName = job["dmName"].AsString();
 		int typeId = job["optype"].AsInt();
 		jobInfo.optype = (typeId<OP_MIN||typeId>OP_MAX)? OP_ALL : (OpType) typeId;
-		jobInfo.referer = utf8::widen(job["dlpage_url"].AsString()).c_str();
-		jobInfo.dlpageReferer = utf8::widen(job["dlpage_referer"].AsString()).c_str();
-		jobInfo.dlpageCookies = utf8::widen(job["dlpage_cookies"].AsString()).c_str();
+		jobInfo.referer = utf8::widen(job["referer"].AsString()).c_str();
+		jobInfo.dlpageReferer = utf8::widen(job["dlpageReferer"].AsString()).c_str();
+		jobInfo.dlpageCookies = utf8::widen(job["dlpageCookies"].AsString()).c_str();
 		jobInfo.useragent = utf8::widen(job["useragent"].AsString()).c_str();
 			
 		for(int i=0; i<jobInfo.dlcount; i++)
 		{
 			LinkInfo info;
-			info.url = utf8::widen(job["downloads"][i]["url"].AsString()).c_str();
-			info.desc = utf8::widen(job["downloads"][i]["desc"].AsString()).c_str();
-			info.cookies = utf8::widen(job["downloads"][i]["cookies"].AsString()).c_str();
-			info.postdata = utf8::widen(job["downloads"][i]["postdata"].AsString()).c_str();
-			info.filename = utf8::widen(job["downloads"][i]["filename"].AsString()).c_str();
-			info.extension = utf8::widen(job["downloads"][i]["extension"].AsString()).c_str();
+			info.url = utf8::widen(job["links"][i]["url"].AsString()).c_str();
+			info.desc = utf8::widen(job["links"][i]["desc"].AsString()).c_str();
+			info.cookies = utf8::widen(job["links"][i]["cookies"].AsString()).c_str();
+			info.postdata = utf8::widen(job["links"][i]["postdata"].AsString()).c_str();
+			info.filename = utf8::widen(job["links"][i]["filename"].AsString()).c_str();
+			info.extension = utf8::widen(job["links"][i]["extension"].AsString()).c_str();
 			jobInfo.links.push_back(info);
 		}
 
