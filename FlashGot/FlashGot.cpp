@@ -46,7 +46,7 @@ wchar_t g_wbuf[BUF_SIZE];
 extern void fail(char *msg, int code) 
 {
 	printf(msg);
-	exit(code);
+	ExitProcess(code);
 }
 
 class DMSAddUrlFamily :
@@ -1689,8 +1689,8 @@ void performTest()
 void performJob(const Json &job)
 {
 	DMSupport *dms = NULL;
-	const char *errMsg="Download manager not properly installed.\n%s";
 	BOOL completed = FALSE;
+	string error("");
 
 	try 
 	{
@@ -1722,13 +1722,13 @@ void performJob(const Json &job)
 	} 
 	catch(_com_error ce)
 	{
-		sprintf_s(g_buf, BUF_SIZE, errMsg, ce.ErrorMessage());
+		sprintf_s(g_buf, BUF_SIZE, "COM Error%s", ce.ErrorMessage());
 	}
 	catch(char *ex) {
-		sprintf_s(g_buf, BUF_SIZE, errMsg, ex);
+		sprintf_s(g_buf, BUF_SIZE, "An exception occured%s", ex);
 	} 
 	catch(...) {
-		sprintf_s(g_buf, BUF_SIZE, errMsg, "");
+		sprintf_s(g_buf, BUF_SIZE, "An unknown error occured%s", "");
 	}
 	
 	if(dms) delete dms;

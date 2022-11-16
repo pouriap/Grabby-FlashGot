@@ -1,6 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FlashGot", "FlashGot\FlashGot.vcxproj", "{36BFB575-4BDC-4835-A0E0-9FD0EC06FDED}"
 EndProject
 Global
