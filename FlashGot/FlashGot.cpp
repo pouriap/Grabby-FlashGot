@@ -1686,6 +1686,37 @@ void performTest()
 	DMSFactory::getInstance()->checkAll();
 }
 
+string readStdin()
+{
+	const int BUFSIZE = 1024;
+	char buf[BUFSIZE];
+	unsigned long bytesRead = 0;
+	unsigned long totalRead = 0;
+	BOOL bSuccess = FALSE;
+	vector<char> data;
+
+	while(true)
+	{
+		data.reserve(BUFSIZE);
+		bytesRead = fread(buf, sizeof(char), BUFSIZE, stdin);
+		if(bytesRead <= 0)
+		{
+			break;
+		}
+		data.insert(data.end(), buf, buf+bytesRead);
+		totalRead += bytesRead;
+	}
+
+	string input = "";
+
+	if(totalRead > 0)
+	{
+		input = string(data.begin(), data.end());
+	}
+
+	return input;
+}
+
 void performJob(const Json &job)
 {
 	DMSupport *dms = NULL;
@@ -1749,7 +1780,7 @@ int main(int argc, char* argv[])
 	{
 		try
 		{
-			string jsonStr = from_base64(argv[1]);
+			string jsonStr = readStdin();
 			Json job = Json::Parse(jsonStr.c_str());
 			performJob(job);
 		}
