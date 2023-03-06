@@ -1,6 +1,6 @@
-This program is part of the native host application that comes with the Download Grab addon. For more information visit https://github.com/pouriap/Firefox-DownloadGrab
+This program is part of the native application that comes with the Grabby addon. For more information visit https://github.com/pouriap/Grabby
 
-This program is a communication bridge between the Download Grab addon and download managers installed on the system.
+This program is a communication bridge between the addon and other applications on the computer such as download managers and yt-dlp.
 
 It is based on `FlashGot.exe` which was part of the FlashGot addon. It has been updated to work with the latest versions of download managers and also support for new download managers has been added to it.
 
