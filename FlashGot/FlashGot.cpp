@@ -1427,21 +1427,22 @@ public:
 	{
 		CookieManager cm(jobInfo);
 		HELPER(h);
-		VARIANT v[8];
-		v[7].vt = v[6].vt = v[5].vt = v[4].vt = v[3].vt = VT_BSTR;
-		v[2].vt = v[1].vt = v[0].vt = VT_INT;
+		VARIANT v[9];
+		v[8].vt = v[7].vt = v[6].vt = v[5].vt = v[4].vt = v[0].vt = VT_BSTR;
+		v[3].vt = v[2].vt = v[1].vt = VT_INT;
 
 		for (long j=0, len=jobInfo->dlcount; j<len ; j++) 
 		{ 
-			v[7].bstrVal=jobInfo->links[j].url;
+			v[8].bstrVal=jobInfo->links[j].url;
+			v[7].bstrVal=jobInfo->links[j].filename;
 			v[6].bstrVal=_bstr_t("");
-			v[5].bstrVal=_bstr_t("");
-			v[4].bstrVal=jobInfo->links[j].desc;
-			v[3].bstrVal=jobInfo->referer;
-			v[2].intVal=-1;
-			v[1].intVal=0;
-			v[0].intVal=-1;
-			h.invoke("AddTask",v,8);
+			v[5].bstrVal=jobInfo->links[j].desc;
+			v[4].bstrVal=jobInfo->referer;
+			v[3].intVal=-1;
+			v[2].intVal=0;
+			v[1].intVal=-1;
+			v[0].bstrVal=jobInfo->links[j].cookies;
+			h.invoke("AddTask2",v,9);
 		}
 
 		h.invoke("CommitTasks");

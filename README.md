@@ -4,6 +4,8 @@ This program is a communication bridge between the addon and other applications 
 
 It is based on `FlashGot.exe` which was part of the FlashGot addon. It has been updated to work with the latest versions of download managers and also support for new download managers has been added to it.
 
+The application is written in C++ using Visual Studio 2012.
+
 ### Currently supported and tested download managers are as follows:
 
 BitComet 1.67
